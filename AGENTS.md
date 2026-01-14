@@ -20,12 +20,9 @@ Current focus is a **POC**. We’re building incrementally and keeping the scope
 - ElevenLabs (voice/music side; for now we only format prompts for it)
 - LangChain (agent/prompt orchestration)
 
-## Current work (text agents only)
+## Current work (text + TTS)
 
-For now, we are only preparing the text agents:
-
-- Agent that reads the user’s written bars and produces response lyrics.
-- Agent that turns those lyrics into an ElevenLabs-ready prompt (divided per beat).
+We are now implementing **ElevenLabs TTS via the ElevenLabs API** (generate audio from the formatted prompt).
 
 ## Repository conventions
 

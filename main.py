@@ -5,7 +5,7 @@ Using LangChain + OpenAI API
 
 Two agents:
 1. Lyricist: Generates timed battle-style response lyrics
-2. Grid + TTS Builder: Creates performance grid and TTS prompt
+2. Grid Builder: Creates performance grid and TTS prompt
 
 Usage:
     export OPENAI_API_KEY="your-key"
@@ -19,6 +19,9 @@ import os
 import json
 import math
 from typing import List, Optional
+from datetime import datetime
+from pathlib import Path
+import requests
 from pydantic import BaseModel, Field, field_validator
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -29,14 +32,21 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import prompts from prompts module
-from prompts import AGENT1_PROMPT_TEMPLATE, AGENT2_PROMPT_TEMPLATE
+from prompts import LYRICIST_PROMPT_TEMPLATE, GRID_BUILDER_PROMPT_TEMPLATE
+
+
+# ============================================================================
+# CONSTANTS
+# ============================================================================
+
+ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/music/detailed"
 
 
 # ============================================================================
 # PYDANTIC MODELS (Agent Output Schemas)
 # ============================================================================
 
-class Agent1Output(BaseModel):
+class LyricistOutput(BaseModel):
     """Schema for Lyricist agent output - beat-based format"""
     grid_beats: int = Field(description="Total beats in the response")
     beats: List[str] = Field(description="List of beat texts, one per beat")
@@ -75,8 +85,8 @@ class PerformanceBeat(BaseModel):
     text: str = Field(description="Text to deliver on this beat")
 
 
-class Agent2Output(BaseModel):
-    """Schema for Grid + TTS Builder agent output"""
+class GridBuilderOutput(BaseModel):
+    """Schema for Grid Builder agent output"""
     ms_per_beat: float = Field(description="Milliseconds per beat")
     performance_grid: List[PerformanceBeat] = Field(description="Beat-by-beat performance grid")
     plain_take: str = Field(description="Single concatenated text in delivery order")
@@ -92,8 +102,8 @@ def count_words(text: str) -> int:
     return len(text.split())
 
 
-def validate_agent1_output(output: Agent1Output, expected_beats: int) -> None:
-    """Validate Agent 1 output matches constraints"""
+def validate_lyricist_output(output: LyricistOutput, expected_beats: int) -> None:
+    """Validate Lyricist output matches constraints"""
     # Check beat count
     if len(output.beats) != expected_beats:
         raise ValueError(
@@ -107,14 +117,76 @@ def validate_agent1_output(output: Agent1Output, expected_beats: int) -> None:
 
 
 # ============================================================================
-# AGENT 1: LYRICIST
+# ELEVENLABS MUSIC GENERATION
+# ============================================================================
+
+def generate_music(tts_prompt: str, seconds: float, api_key: str) -> str:
+    """
+    Generate music using ElevenLabs API
+
+    Args:
+        tts_prompt: The formatted TTS prompt from Agent 2
+        seconds: Duration of the music in seconds
+        api_key: ElevenLabs API key
+
+    Returns:
+        str: Path to the saved MP3 file
+
+    Raises:
+        Exception: If API call fails or response is invalid
+    """
+    # Prepare output directory
+    output_dir = Path("music_output")
+    output_dir.mkdir(exist_ok=True)
+
+    # Generate timestamp filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = output_dir / f"rap_battle_{timestamp}.mp3"
+
+    # Request headers
+    headers = {
+        "xi-api-key": api_key,
+        "Content-Type": "application/json"
+    }
+
+    # Request body
+    payload = {
+        "prompt": tts_prompt,
+        "music_length_ms": int(seconds * 1000)
+    }
+
+    print(f"🎵 Calling ElevenLabs API...")
+    print(f"   Prompt: {tts_prompt[:100]}...")
+    print(f"   Duration: {seconds}s ({payload['music_length_ms']}ms)")
+
+    try:
+        # Make API request
+        response = requests.post(ELEVENLABS_API_URL, headers=headers, json=payload)
+        response.raise_for_status()
+
+        # Save audio file
+        with open(output_path, "wb") as f:
+            f.write(response.content)
+
+        print(f"✓ Music generated successfully: {output_path}")
+        return str(output_path)
+
+    except requests.exceptions.RequestException as e:
+        error_msg = f"ElevenLabs API error: {str(e)}"
+        if hasattr(e.response, 'text'):
+            error_msg += f"\nResponse: {e.response.text}"
+        raise Exception(error_msg)
+
+
+# ============================================================================
+# LYRICIST AGENT
 # ============================================================================
 
 def create_lyricist_agent(model_name: str = "gpt-4o-mini"):
-    """Create Agent 1: Lyricist"""
-    parser = PydanticOutputParser(pydantic_object=Agent1Output)
+    """Create the Lyricist agent"""
+    parser = PydanticOutputParser(pydantic_object=LyricistOutput)
 
-    prompt = ChatPromptTemplate.from_template(AGENT1_PROMPT_TEMPLATE)
+    prompt = ChatPromptTemplate.from_template(LYRICIST_PROMPT_TEMPLATE)
 
     llm = ChatOpenAI(
         model="gpt-5-mini",
@@ -130,14 +202,14 @@ def create_lyricist_agent(model_name: str = "gpt-4o-mini"):
 
 
 # ============================================================================
-# AGENT 2: GRID + TTS PROMPT BUILDER
+# GRID BUILDER AGENT
 # ============================================================================
 
 def create_grid_builder_agent(model_name: str = "gpt-4o-mini"):
-    """Create Agent 2: Grid + TTS Prompt Builder"""
-    parser = PydanticOutputParser(pydantic_object=Agent2Output)
+    """Create the Grid Builder agent"""
+    parser = PydanticOutputParser(pydantic_object=GridBuilderOutput)
 
-    prompt = ChatPromptTemplate.from_template(AGENT2_PROMPT_TEMPLATE)
+    prompt = ChatPromptTemplate.from_template(GRID_BUILDER_PROMPT_TEMPLATE)
 
     llm = ChatOpenAI(
         model="gpt-5-mini",
@@ -165,6 +237,10 @@ class RapBattleOrchestrator:
         if not self.openai_api_key:
             raise ValueError("OPENAI_API_KEY environment variable is required")
 
+        self.elevenlabs_api_key = os.environ.get("ELEVENLABS_API_KEY")
+        if not self.elevenlabs_api_key:
+            raise ValueError("ELEVENLABS_API_KEY environment variable is required")
+
         self.model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
         # Required params
@@ -181,8 +257,8 @@ class RapBattleOrchestrator:
         self._compute_timing()
 
         # Create agents
-        self.agent1_chain, self.agent1_parser = create_lyricist_agent(self.model)
-        self.agent2_chain, self.agent2_parser = create_grid_builder_agent(self.model)
+        self.lyricist_chain, self.lyricist_parser = create_lyricist_agent(self.model)
+        self.grid_builder_chain, self.grid_builder_parser = create_grid_builder_agent(self.model)
 
     def _compute_timing(self):
         """Compute timing constraints"""
@@ -203,57 +279,72 @@ class RapBattleOrchestrator:
         """Execute the full pipeline"""
         print("🎤 Starting Rap Battle Response Generator...\n")
 
-        # Step 1: Invoke Agent 1 (Lyricist)
-        print("📝 Agent 1 (Lyricist): Generating beat-by-beat lyrics...")
+        # Step 1: Invoke the Lyricist
+        print("📝 Lyricist: Generating beat-by-beat lyrics...")
 
-        agent1_input = {
+        lyricist_input = {
             "opponent_bars": self.opponent_bars,
             "bpm": self.bpm,
             "seconds": self.seconds,
             "grid_beats": self.grid_beats,
             "grid_beats_minus_1": self.grid_beats - 1,
-            "format_instructions": self.agent1_parser.get_format_instructions()
+            "format_instructions": self.lyricist_parser.get_format_instructions()
         }
 
-        agent1_output = self.agent1_chain.invoke(agent1_input)
+        lyricist_output = self.lyricist_chain.invoke(lyricist_input)
 
-        print("✓ Agent 1 complete\n")
-        print("=== AGENT 1 OUTPUT (Beat-by-Beat Lyrics) ===")
-        print(json.dumps(agent1_output.model_dump(), indent=2))
+        print("✓ Lyricist complete\n")
+        print("=== LYRICIST OUTPUT (Beat-by-Beat Lyrics) ===")
+        print(json.dumps(lyricist_output.model_dump(), indent=2))
         print("=============================================\n")
 
-        # Step 2: Validate Agent 1 output
-        print("🔍 Validating Agent 1 output...")
-        validate_agent1_output(agent1_output, self.grid_beats)
+        # Step 2: Validate Lyricist output
+        print("🔍 Validating Lyricist output...")
+        validate_lyricist_output(lyricist_output, self.grid_beats)
         print()
 
-        # Step 3: Invoke Agent 2 (Grid + TTS Builder)
-        print("🎵 Agent 2 (Grid + TTS Builder): Building performance grid...")
+        # Step 3: Invoke Grid Builder
+        print("🎵 Grid Builder: Building performance grid...")
 
-        agent2_input = {
-            "agent1_json": json.dumps(agent1_output.model_dump(), indent=2),
+        grid_builder_input = {
+            "lyricist_json": json.dumps(lyricist_output.model_dump(), indent=2),
             "bpm": self.bpm,
             "seconds": self.seconds,
-            "format_instructions": self.agent2_parser.get_format_instructions()
+            "format_instructions": self.grid_builder_parser.get_format_instructions()
         }
 
-        agent2_output = self.agent2_chain.invoke(agent2_input)
+        grid_builder_output = self.grid_builder_chain.invoke(grid_builder_input)
 
-        print("✓ Agent 2 complete\n")
-        print("=== AGENT 2 OUTPUT (Performance Grid) ===")
-        print(json.dumps(agent2_output.model_dump(), indent=2))
-        print("==========================================\n")
+        print("✓ Grid Builder complete\n")
+        print("=== GRID BUILDER OUTPUT (Performance Grid) ===")
+        print(json.dumps(grid_builder_output.model_dump(), indent=2))
+        print("===============================================\n")
 
         # Step 4: Display final TTS prompt
         print("=== FINAL TTS PROMPT ===")
-        print(agent2_output.tts_prompt)
+        print(grid_builder_output.tts_prompt)
         print("========================\n")
+
+        # Step 5: Generate music using ElevenLabs
+        print("🎼 Step 3: Generating music with ElevenLabs...")
+        try:
+            music_file_path = generate_music(
+                tts_prompt=grid_builder_output.tts_prompt,
+                seconds=self.seconds,
+                api_key=self.elevenlabs_api_key
+            )
+            print(f"✓ Music file saved: {music_file_path}\n")
+        except Exception as e:
+            print(f"⚠️  Music generation failed: {e}")
+            print("   Continuing without audio output...\n")
+            music_file_path = None
 
         print("✓ Pipeline complete!")
 
         return {
-            "agent1_output": agent1_output,
-            "agent2_output": agent2_output
+            "lyricist_output": lyricist_output,
+            "grid_builder_output": grid_builder_output,
+            "music_file_path": music_file_path
         }
 
 

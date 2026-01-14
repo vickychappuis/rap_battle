@@ -1,17 +1,17 @@
 """
-Agent 2: Grid + TTS Prompt Builder Template
+Grid Builder Prompt Template
 
 This agent creates performance grids and TTS-ready prompts from lyrics.
 """
 
-AGENT_TWO_PROMPT_TEMPLATE = """# Performance Grid & TTS Prompt Builder
+GRID_BUILDER_PROMPT_TEMPLATE = """# Performance Grid & TTS Prompt Builder
 
-You are a performance grid and TTS prompt builder for rap delivery. Agent 1 has already structured the lyrics beat-by-beat. Your job is to format them for TTS.
+You are a performance grid and TTS prompt builder for rap delivery. The Lyricist has already structured the lyrics beat-by-beat. Your job is to format them for TTS.
 
-## Input Data (Agent 1 Output - Beat-by-Beat)
+## Input Data (Lyricist Output - Beat-by-Beat)
 
 ```json
-{agent1_json}
+{lyricist_json}
 ```
 
 ## Timing Parameters
@@ -27,13 +27,13 @@ You are a performance grid and TTS prompt builder for rap delivery. Agent 1 has 
 - `ms_per_beat = 60000 / BPM`
 
 ### 2. Build Performance Grid
-Take the beat texts from Agent 1 and create a `performance_grid`:
+Take the beat texts from the Lyricist and create a `performance_grid`:
 
 **For each beat:**
 - `beat`: Beat number (1-indexed, from 1 to grid_beats)
 - `bar`: Bar number (1-indexed, beat ÷ 4, rounded up)
 - `beat_in_bar`: Position within bar (1-4, calculated as: ((beat-1) % 4) + 1)
-- `text`: The beat text from Agent 1's `beats` array
+- `text`: The beat text from the Lyricist's `beats` array
 
 **Example:**
 ```
@@ -80,7 +80,7 @@ You must respond with **ONLY** valid JSON matching this structure (no extra text
 
 ### Critical Requirements
 - Calculate `ms_per_beat` correctly
-- Map every beat from Agent 1's output
+- Map every beat from the Lyricist's output
 - Calculate bar numbers correctly (beat ÷ 4, rounded up)
 - Return **ONLY** the JSON object, no other text
 
@@ -88,8 +88,8 @@ You must respond with **ONLY** valid JSON matching this structure (no extra text
 """
 
 # Agent metadata
-AGENT_TWO_METADATA = {
-    "name": "Grid + TTS Builder",
+GRID_BUILDER_METADATA = {
+    "name": "Grid Builder",
     "description": "Creates performance grid and TTS-ready prompts",
     "temperature": 0.0,
     "default_model": "gpt-4o-mini"

@@ -212,8 +212,8 @@ export OPENAI_MODEL=gpt-4
 
 Prompts use markdown formatting for clarity:
 
-- `prompts/agent_one_prompt.py` - Beat-by-beat lyric generation
-- `prompts/agent_two_prompt.py` - Performance grid formatting
+- `prompts/lyricist_prompt.py` - Beat-by-beat lyric generation
+- `prompts/grid_builder_prompt.py` - Performance grid formatting
 
 Edit these files to change:
 - Content style (battle rap → storytelling)
@@ -226,8 +226,8 @@ Edit these files to change:
 rap_battle/
 ├── main.py                      # Orchestrator + validation
 ├── prompts/
-│   ├── agent_one_prompt.py      # Beat-based lyricist
-│   └── agent_two_prompt.py      # Grid formatter
+│   ├── lyricist_prompt.py       # Beat-based lyricist
+│   └── grid_builder_prompt.py   # Grid formatter
 ├── tests/
 │   └── test_timing.py           # Timing calculator
 ├── .env.example                 # Configuration template

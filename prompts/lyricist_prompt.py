@@ -1,10 +1,10 @@
 """
-Agent 1: Lyricist Prompt Template
+Lyricist Prompt Template
 
 This agent generates battle rap lyrics with precise timing constraints.
 """
 
-AGENT_ONE_PROMPT_TEMPLATE = """# Battle Rap Lyricist AI
+LYRICIST_PROMPT_TEMPLATE = """# Battle Rap Lyricist AI
 
 You are a battle rap lyricist AI. Your task is to write an original rap response to the opponent's bars, structured **beat-by-beat**.
 
@@ -84,7 +84,7 @@ You must respond with **ONLY** valid JSON matching this structure (no extra text
 """
 
 # Agent metadata
-AGENT_ONE_METADATA = {
+LYRICIST_METADATA = {
     "name": "Lyricist",
     "description": "Generates battle rap lyrics with precise timing constraints",
     "temperature": 0.7,

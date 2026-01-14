@@ -191,8 +191,8 @@ rap_battle/
 ├── main.py                      # Main orchestrator and agent implementations
 ├── prompts/
 │   ├── __init__.py              # Prompts package initialization
-│   ├── agent_one_prompt.py      # Agent 1 (Lyricist) prompt template
-│   └── agent_two_prompt.py      # Agent 2 (Grid + TTS Builder) prompt template
+│   ├── lyricist_prompt.py       # Lyricist prompt template
+│   └── grid_builder_prompt.py   # Grid Builder prompt template
 ├── tests/
 │   ├── __init__.py
 │   └── test_timing.py           # Timing calculation tests (no API key required)
@@ -209,17 +209,17 @@ rap_battle/
 ### Key Components
 
 1. **Pydantic Models**: Type-safe schemas for agent outputs
-   - `Agent1Output`: Lyrics structure
-   - `Agent2Output`: Performance grid structure
+   - `LyricistOutput`: Lyrics structure
+   - `GridBuilderOutput`: Performance grid structure
    - `PerformanceBeat`: Single beat in grid
 
 2. **Validation Utilities**: Ensure word counts and structure correctness
    - `count_words()`: Word counting
-   - `validate_agent1_output()`: Verify bars and tail
+   - `validate_lyricist_output()`: Verify bars and tail
 
 3. **Agent Prompts** (one file per agent): Detailed instructions for each agent
-   - `prompts/agent_one_prompt.py`: Agent 1 (Lyricist) instructions and metadata
-   - `prompts/agent_two_prompt.py`: Agent 2 (Grid + TTS Builder) instructions and metadata
+   - `prompts/lyricist_prompt.py`: Lyricist instructions and metadata
+   - `prompts/grid_builder_prompt.py`: Grid Builder instructions and metadata
    - Each file contains template and metadata for easy modification
 
 4. **Orchestrator**: `RapBattleOrchestrator` class
