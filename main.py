@@ -9,9 +9,21 @@ Two agents:
 
 Usage:
     export OPENAI_API_KEY="your-key"
+    export ELEVENLABS_API_KEY="your-key"
     export BPM=90
     export SECONDS_LENGTH_OF_ANSWER=10
-    export OPPONENT_BARS="Your rhymes are weak, your flow is slow, step aside and watch a pro go"
+
+    # Option 1: Provide opponent bars as text
+    export OPPONENT_BARS="Your rhymes are weak, your flow is slow"
+    python main.py
+
+    # Option 2: Transcribe from audio file
+    export OPPONENT_AUDIO_PATH="path/to/opponent.wav"
+    python main.py
+
+    # Option 3: Record live from microphone
+    export RECORD_OPPONENT_BARS=true
+    export RECORD_DURATION=10  # optional, defaults to 10 seconds
     python main.py
 """
 
@@ -33,6 +45,7 @@ load_dotenv()
 
 # Import prompts from prompts module
 from prompts import LYRICIST_PROMPT_TEMPLATE, GRID_BUILDER_PROMPT_TEMPLATE
+from stt import record_and_transcribe, transcribe_audio
 
 
 # ============================================================================
@@ -246,12 +259,15 @@ class RapBattleOrchestrator:
         # Required params
         self.bpm = int(os.environ.get("BPM", 0))
         self.seconds = float(os.environ.get("SECONDS_LENGTH_OF_ANSWER", 0))
-        self.opponent_bars = os.environ.get("OPPONENT_BARS", "")
 
-        if not self.bpm or not self.seconds or not self.opponent_bars:
-            raise ValueError(
-                "Required env vars: BPM, SECONDS_LENGTH_OF_ANSWER, OPPONENT_BARS"
-            )
+        if not self.bpm or not self.seconds:
+            raise ValueError("Required env vars: BPM, SECONDS_LENGTH_OF_ANSWER")
+
+        # Get opponent bars from one of three sources (priority order):
+        # 1. Text (OPPONENT_BARS)
+        # 2. Audio file (OPPONENT_AUDIO_PATH)
+        # 3. Live recording (RECORD_OPPONENT_BARS=true)
+        self.opponent_bars = self._get_opponent_bars()
 
         # Compute timing constraints
         self._compute_timing()
@@ -259,6 +275,45 @@ class RapBattleOrchestrator:
         # Create agents
         self.lyricist_chain, self.lyricist_parser = create_lyricist_agent(self.model)
         self.grid_builder_chain, self.grid_builder_parser = create_grid_builder_agent(self.model)
+
+    def _get_opponent_bars(self) -> str:
+        """
+        Get opponent bars from text, audio file, or live recording.
+
+        Priority:
+        1. OPPONENT_BARS env var (direct text)
+        2. OPPONENT_AUDIO_PATH env var (transcribe audio file)
+        3. RECORD_OPPONENT_BARS=true (record from microphone)
+
+        Returns:
+            Transcribed or provided opponent bars text
+
+        Raises:
+            ValueError: If no input source is provided
+        """
+        # Option 1: Direct text input
+        opponent_bars = os.environ.get("OPPONENT_BARS", "").strip()
+        if opponent_bars:
+            print("Using opponent bars from OPPONENT_BARS env var")
+            return opponent_bars
+
+        # Option 2: Transcribe from audio file
+        audio_path = os.environ.get("OPPONENT_AUDIO_PATH", "").strip()
+        if audio_path:
+            print(f"Transcribing opponent bars from audio file: {audio_path}")
+            return transcribe_audio(audio_path)
+
+        # Option 3: Record from microphone
+        record_enabled = os.environ.get("RECORD_OPPONENT_BARS", "").lower() in ("true", "1", "yes")
+        if record_enabled:
+            record_duration = float(os.environ.get("RECORD_DURATION", "10"))
+            print(f"Recording opponent bars for {record_duration} seconds...")
+            return record_and_transcribe(record_duration)
+
+        raise ValueError(
+            "No opponent input provided. Set one of: "
+            "OPPONENT_BARS (text), OPPONENT_AUDIO_PATH (file), or RECORD_OPPONENT_BARS=true"
+        )
 
     def _compute_timing(self):
         """Compute timing constraints"""

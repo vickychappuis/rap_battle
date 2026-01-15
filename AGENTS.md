@@ -6,23 +6,37 @@ This project is an app for hip-hoppers to battle rap against AI.
 
 High-level flow (target architecture):
 
-1. User performs bars (eventually speech → text).
-2. An AI agent generates a rap response (lyrics).
-3. Another agent converts the lyrics into a prompt formatted for ElevenLabs (lyrics divided per beat).
-4. (Later) ElevenLabs generates audio.
+1. User spits bars (audio input).
+2. Speech → text using OpenAI STT (transcription).
+3. An AI agent generates a rap response (lyrics). ✅ implemented
+4. Another agent converts the lyrics into an ElevenLabs-ready prompt (lyrics divided per beat). ✅ implemented
+5. ElevenLabs generates audio/music from the formatted prompt. ✅ implemented
 
 Current focus is a **POC**. We’re building incrementally and keeping the scope tight.
 
 ## Technologies
 
 - Python
-- OpenAI (text generation)
-- ElevenLabs (voice/music side; for now we only format prompts for it)
+- OpenAI
+  - Speech-to-text (STT) for transcribing the user’s spoken bars
+  - Text generation for rap responses
+- ElevenLabs (audio/music generation)
 - LangChain (agent/prompt orchestration)
 
-## Current work (text + TTS)
+## Current focus (speech input + STT)
 
-We are now implementing **ElevenLabs TTS via the ElevenLabs API** (generate audio from the formatted prompt).
+Speech-to-text (STT) via OpenAI is now implemented:
+
+- Capture/accept the user's recorded bars (audio) via microphone or file
+- Transcribe audio → text using OpenAI Whisper API
+- Feed transcription into the existing battle pipeline
+
+## Status
+
+- AI rap response generation: ✅ implemented
+- ElevenLabs prompt formatting (per beat): ✅ implemented
+- ElevenLabs audio/music generation (API): ✅ implemented
+- OpenAI STT (audio → text): ✅ implemented
 
 ## Repository conventions
 
@@ -32,7 +46,8 @@ We are now implementing **ElevenLabs TTS via the ElevenLabs API** (generate audi
 
 ## Documentation
 
-- All documentation related to changes, implementations, and project decisions should be placed in `/Users/victoriachappuis/personal/rap_battle/changes_documentation`.
+- All documentation related to changes, implementations, and project decisions should be placed in:
+  `/Users/victoriachappuis/personal/rap_battle/changes_documentation`
 
 ## Dependencies
 
@@ -42,4 +57,6 @@ We are now implementing **ElevenLabs TTS via the ElevenLabs API** (generate audi
 ## Configuration & secrets
 
 - API keys should come from environment variables (never committed).
-- Avoid logging sensitive user content by default.
+  - `OPENAI_API_KEY`
+  - `ELEVENLABS_API_KEY` (and any other ElevenLabs-required env vars)
+- Avoid logging sensitive user content by default (including raw audio and full transcriptions).
