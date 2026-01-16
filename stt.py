@@ -83,9 +83,11 @@ def transcribe_audio(audio_path: str, language: str = "en") -> str:
 
     print(f"Transcribing {audio_path.name}...")
 
+    stt_model = os.environ.get("OPENAI_STT_MODEL", "whisper-1")
+
     with open(audio_path, "rb") as audio_file:
         transcription = client.audio.transcriptions.create(
-            model="whisper-1",
+            model=stt_model,
             file=audio_file,
             language=language,
             prompt="rap battle freestyle hip-hop bars rhymes",  # Context hint
