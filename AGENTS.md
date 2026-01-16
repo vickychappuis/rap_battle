@@ -7,10 +7,11 @@ This project is an app for hip-hoppers to battle rap against AI.
 High-level flow (target architecture):
 
 1. User spits bars (audio input).
-2. Speech → text using OpenAI STT (transcription).
+2. Speech → text using OpenAI STT (transcription). ✅ implemented
 3. An AI agent generates a rap response (lyrics). ✅ implemented
 4. Another agent converts the lyrics into an ElevenLabs-ready prompt (lyrics divided per beat). ✅ implemented
 5. ElevenLabs generates audio/music from the formatted prompt. ✅ implemented
+6. **NEW (next):** Start a base instrumental immediately when the user starts, keep it playing through the whole pipeline, then insert the ElevenLabs audio at the next best beat/bar moment. 🔜 next
 
 Current focus is a **POC**. We’re building incrementally and keeping the scope tight.
 
@@ -23,13 +24,15 @@ Current focus is a **POC**. We’re building incrementally and keeping the scope
 - ElevenLabs (audio/music generation)
 - LangChain (agent/prompt orchestration)
 
-## Current focus (speech input + STT)
+## Current focus (base track playback + scheduled insert)
 
-Speech-to-text (STT) via OpenAI is now implemented:
+We want a consistent “battle session” experience where the same instrumental plays continuously:
 
-- Capture/accept the user's recorded bars (audio) via microphone or file
-- Transcribe audio → text using OpenAI Whisper API
-- Feed transcription into the existing battle pipeline
+- When the user begins recording / the pipeline starts, **start playing the base hip-hop instrumental immediately**.
+- The base track **keeps playing** while we transcribe (STT), generate the rap response, format the prompt, and call ElevenLabs.
+- When the ElevenLabs audio is ready, **save it**, then **wait to place/play it at the next best moment** (e.g., next beat or next bar).
+  - This moment should be **planned/recorded** using the known BPM (we don’t care if the user is perfectly on beat; we just want predictable placement).
+- The goal is that the user can rap over the beat, and the AI response comes in cleanly at a natural musical boundary.
 
 ## Status
 
@@ -37,6 +40,7 @@ Speech-to-text (STT) via OpenAI is now implemented:
 - ElevenLabs prompt formatting (per beat): ✅ implemented
 - ElevenLabs audio/music generation (API): ✅ implemented
 - OpenAI STT (audio → text): ✅ implemented
+- **Base instrumental session playback + scheduled ElevenLabs insert (BPM-based): 🔜 next**
 
 ## Repository conventions
 
