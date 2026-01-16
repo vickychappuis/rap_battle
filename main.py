@@ -334,6 +334,11 @@ class RapBattleOrchestrator:
         """Execute the full pipeline"""
         print("🎤 Starting Rap Battle Response Generator...\n")
 
+        # Step 0: Display transcribed/input opponent bars
+        print("=== OPPONENT BARS (STT Transcription) ===")
+        print(self.opponent_bars)
+        print("==========================================\n")
+
         # Step 1: Invoke the Lyricist
         print("📝 Lyricist: Generating beat-by-beat lyrics...")
 
