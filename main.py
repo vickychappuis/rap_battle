@@ -281,9 +281,9 @@ class RapBattleOrchestrator:
         Get opponent bars from text, audio file, or live recording.
 
         Priority:
-        1. OPPONENT_BARS env var (direct text)
-        2. OPPONENT_AUDIO_PATH env var (transcribe audio file)
-        3. RECORD_OPPONENT_BARS=true (record from microphone)
+        1. RECORD_OPPONENT_BARS=true (record from microphone)
+        2. OPPONENT_BARS env var (direct text)
+        3. OPPONENT_AUDIO_PATH env var (transcribe audio file)
 
         Returns:
             Transcribed or provided opponent bars text
@@ -291,24 +291,24 @@ class RapBattleOrchestrator:
         Raises:
             ValueError: If no input source is provided
         """
-        # Option 1: Direct text input
-        opponent_bars = os.environ.get("OPPONENT_BARS", "").strip()
-        if opponent_bars:
-            print("Using opponent bars from OPPONENT_BARS env var")
-            return opponent_bars
-
-        # Option 2: Transcribe from audio file
-        audio_path = os.environ.get("OPPONENT_AUDIO_PATH", "").strip()
-        if audio_path:
-            print(f"Transcribing opponent bars from audio file: {audio_path}")
-            return transcribe_audio(audio_path)
-
-        # Option 3: Record from microphone
+        # Option 1: Record from microphone
         record_enabled = os.environ.get("RECORD_OPPONENT_BARS", "").lower() in ("true", "1", "yes")
         if record_enabled:
             record_duration = float(os.environ.get("RECORD_DURATION", "10"))
             print(f"Recording opponent bars for {record_duration} seconds...")
             return record_and_transcribe(record_duration)
+
+        # Option 2: Direct text input
+        opponent_bars = os.environ.get("OPPONENT_BARS", "").strip()
+        if opponent_bars:
+            print("Using opponent bars from OPPONENT_BARS env var")
+            return opponent_bars
+
+        # Option 3: Transcribe from audio file
+        audio_path = os.environ.get("OPPONENT_AUDIO_PATH", "").strip()
+        if audio_path:
+            print(f"Transcribing opponent bars from audio file: {audio_path}")
+            return transcribe_audio(audio_path)
 
         raise ValueError(
             "No opponent input provided. Set one of: "
@@ -382,6 +382,7 @@ class RapBattleOrchestrator:
 
         # Step 5: Generate music using ElevenLabs
         print("🎼 Step 3: Generating music with ElevenLabs...")
+        input("Press Enter to call ElevenLabs API (or Ctrl+C to cancel)...")
         try:
             music_file_path = generate_music(
                 tts_prompt=grid_builder_output.tts_prompt,
