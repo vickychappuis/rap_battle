@@ -266,11 +266,12 @@ class RapBattleOrchestrator:
         if not self.bpm or not self.seconds:
             raise ValueError("Required env vars: BPM, SECONDS_LENGTH_OF_ANSWER")
 
-        # Get opponent bars from one of three sources (priority order):
-        # 1. Text (OPPONENT_BARS)
-        # 2. Audio file (OPPONENT_AUDIO_PATH)
-        # 3. Live recording (RECORD_OPPONENT_BARS=true)
-        self.opponent_bars = self._get_opponent_bars()
+        # Initialize audio mixer for base track playback (before opponent input)
+        base_track_path = os.environ.get("BASE_TRACK_PATH", "assets/tracks/base_90bpm.wav")
+        self.mixer = AudioMixer(base_track_path, self.bpm)
+
+        # Opponent bars will be captured in run() after beat starts
+        self.opponent_bars = None
 
         # Compute timing constraints
         self._compute_timing()
@@ -278,10 +279,6 @@ class RapBattleOrchestrator:
         # Create agents
         self.lyricist_chain, self.lyricist_parser = create_lyricist_agent(self.model)
         self.grid_builder_chain, self.grid_builder_parser = create_grid_builder_agent(self.model)
-
-        # Initialize audio mixer for base track playback
-        base_track_path = os.environ.get("BASE_TRACK_PATH", "assets/tracks/base_90bpm.wav")
-        self.mixer = AudioMixer(base_track_path, self.bpm)
 
     def _get_opponent_bars(self) -> str:
         """
@@ -341,12 +338,17 @@ class RapBattleOrchestrator:
         """Execute the full pipeline"""
         print("🎤 Starting Rap Battle Response Generator...\n")
 
-        # Load and start base track playback
+        # Load and start base track playback FIRST (beat plays during opponent input)
         self.mixer.load_base_track()
         self.mixer.start()
 
         try:
-            # Step 0: Display transcribed/input opponent bars
+            # Wait for user to be ready before capturing opponent bars
+            input("Press Enter when ready to record opponent bars...")
+
+            # Step 0: Get opponent bars (recording happens with beat playing)
+            self.opponent_bars = self._get_opponent_bars()
+
             print("=== OPPONENT BARS (STT Transcription) ===")
             print(self.opponent_bars)
             print("==========================================\n")
