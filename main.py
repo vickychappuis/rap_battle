@@ -31,6 +31,7 @@ import os
 import json
 import math
 import time
+import random
 from typing import List, Optional
 from datetime import datetime
 from pathlib import Path
@@ -396,17 +397,31 @@ class RapBattleOrchestrator:
             print(grid_builder_output.tts_prompt)
             print("========================\n")
 
-            # Step 5: Generate music using ElevenLabs
-            print("🎼 Step 3: Generating music with ElevenLabs...")
-            input("Press Enter to call ElevenLabs API (or Ctrl+C to cancel)...")
+            # Step 5: Generate music using ElevenLabs (or mock)
+            mock_mode = os.environ.get("MOCK_ELEVENLABS", "").lower() in ("true", "1", "yes")
+            mock_response_path = os.environ.get("MOCK_RESPONSE_PATH", "")
+
             music_file_path = None
             try:
-                music_file_path = generate_music(
-                    tts_prompt=grid_builder_output.tts_prompt,
-                    seconds=self.seconds,
-                    api_key=self.elevenlabs_api_key
-                )
-                print(f"✓ Music file saved: {music_file_path}\n")
+                if mock_mode and mock_response_path:
+                    # Mock mode: simulate API delay and use existing audio file
+                    delay = random.uniform(5, 15)
+                    print(f"🎼 [MOCK MODE] Simulating ElevenLabs API call...")
+                    print(f"   Using mock response: {mock_response_path}")
+                    print(f"   Simulating {delay:.1f}s API delay...")
+                    time.sleep(delay)
+                    music_file_path = mock_response_path
+                    print(f"✓ [MOCK] Audio ready: {music_file_path}\n")
+                else:
+                    # Real API call
+                    print("🎼 Step 3: Generating music with ElevenLabs...")
+                    input("Press Enter to call ElevenLabs API (or Ctrl+C to cancel)...")
+                    music_file_path = generate_music(
+                        tts_prompt=grid_builder_output.tts_prompt,
+                        seconds=self.seconds,
+                        api_key=self.elevenlabs_api_key
+                    )
+                    print(f"✓ Music file saved: {music_file_path}\n")
 
                 # Load the AI response audio and schedule overlay at next bar
                 response_audio = load_audio_file(music_file_path)
