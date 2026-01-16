@@ -30,6 +30,7 @@ Usage:
 import os
 import json
 import math
+import time
 from typing import List, Optional
 from datetime import datetime
 from pathlib import Path
@@ -46,6 +47,7 @@ load_dotenv()
 # Import prompts from prompts module
 from prompts import LYRICIST_PROMPT_TEMPLATE, GRID_BUILDER_PROMPT_TEMPLATE
 from stt import record_and_transcribe, transcribe_audio
+from audio_player import AudioMixer, load_audio_file, SAMPLE_RATE
 
 
 # ============================================================================
@@ -276,6 +278,10 @@ class RapBattleOrchestrator:
         self.lyricist_chain, self.lyricist_parser = create_lyricist_agent(self.model)
         self.grid_builder_chain, self.grid_builder_parser = create_grid_builder_agent(self.model)
 
+        # Initialize audio mixer for base track playback
+        base_track_path = os.environ.get("BASE_TRACK_PATH", "assets/tracks/base_90bpm.wav")
+        self.mixer = AudioMixer(base_track_path, self.bpm)
+
     def _get_opponent_bars(self) -> str:
         """
         Get opponent bars from text, audio file, or live recording.
@@ -334,79 +340,105 @@ class RapBattleOrchestrator:
         """Execute the full pipeline"""
         print("🎤 Starting Rap Battle Response Generator...\n")
 
-        # Step 0: Display transcribed/input opponent bars
-        print("=== OPPONENT BARS (STT Transcription) ===")
-        print(self.opponent_bars)
-        print("==========================================\n")
+        # Load and start base track playback
+        self.mixer.load_base_track()
+        self.mixer.start()
 
-        # Step 1: Invoke the Lyricist
-        print("📝 Lyricist: Generating beat-by-beat lyrics...")
-
-        lyricist_input = {
-            "opponent_bars": self.opponent_bars,
-            "bpm": self.bpm,
-            "seconds": self.seconds,
-            "grid_beats": self.grid_beats,
-            "grid_beats_minus_1": self.grid_beats - 1,
-            "format_instructions": self.lyricist_parser.get_format_instructions()
-        }
-
-        lyricist_output = self.lyricist_chain.invoke(lyricist_input)
-
-        print("✓ Lyricist complete\n")
-        print("=== LYRICIST OUTPUT (Beat-by-Beat Lyrics) ===")
-        print(json.dumps(lyricist_output.model_dump(), indent=2))
-        print("=============================================\n")
-
-        # Step 2: Validate Lyricist output
-        print("🔍 Validating Lyricist output...")
-        validate_lyricist_output(lyricist_output, self.grid_beats)
-        print()
-
-        # Step 3: Invoke Grid Builder
-        print("🎵 Grid Builder: Building performance grid...")
-
-        grid_builder_input = {
-            "lyricist_json": json.dumps(lyricist_output.model_dump(), indent=2),
-            "bpm": self.bpm,
-            "seconds": self.seconds,
-            "format_instructions": self.grid_builder_parser.get_format_instructions()
-        }
-
-        grid_builder_output = self.grid_builder_chain.invoke(grid_builder_input)
-
-        print("✓ Grid Builder complete\n")
-        print("=== GRID BUILDER OUTPUT (Performance Grid) ===")
-        print(json.dumps(grid_builder_output.model_dump(), indent=2))
-        print("===============================================\n")
-
-        # Step 4: Display final TTS prompt
-        print("=== FINAL TTS PROMPT ===")
-        print(grid_builder_output.tts_prompt)
-        print("========================\n")
-
-        # Step 5: Generate music using ElevenLabs
-        print("🎼 Step 3: Generating music with ElevenLabs...")
-        input("Press Enter to call ElevenLabs API (or Ctrl+C to cancel)...")
         try:
-            music_file_path = generate_music(
-                tts_prompt=grid_builder_output.tts_prompt,
-                seconds=self.seconds,
-                api_key=self.elevenlabs_api_key
-            )
-            print(f"✓ Music file saved: {music_file_path}\n")
-        except Exception as e:
-            print(f"⚠️  Music generation failed: {e}")
-            print("   Continuing without audio output...\n")
+            # Step 0: Display transcribed/input opponent bars
+            print("=== OPPONENT BARS (STT Transcription) ===")
+            print(self.opponent_bars)
+            print("==========================================\n")
+
+            # Step 1: Invoke the Lyricist
+            print("📝 Lyricist: Generating beat-by-beat lyrics...")
+
+            lyricist_input = {
+                "opponent_bars": self.opponent_bars,
+                "bpm": self.bpm,
+                "seconds": self.seconds,
+                "grid_beats": self.grid_beats,
+                "grid_beats_minus_1": self.grid_beats - 1,
+                "format_instructions": self.lyricist_parser.get_format_instructions()
+            }
+
+            lyricist_output = self.lyricist_chain.invoke(lyricist_input)
+
+            print("✓ Lyricist complete\n")
+            print("=== LYRICIST OUTPUT (Beat-by-Beat Lyrics) ===")
+            print(json.dumps(lyricist_output.model_dump(), indent=2))
+            print("=============================================\n")
+
+            # Step 2: Validate Lyricist output
+            print("🔍 Validating Lyricist output...")
+            validate_lyricist_output(lyricist_output, self.grid_beats)
+            print()
+
+            # Step 3: Invoke Grid Builder
+            print("🎵 Grid Builder: Building performance grid...")
+
+            grid_builder_input = {
+                "lyricist_json": json.dumps(lyricist_output.model_dump(), indent=2),
+                "bpm": self.bpm,
+                "seconds": self.seconds,
+                "format_instructions": self.grid_builder_parser.get_format_instructions()
+            }
+
+            grid_builder_output = self.grid_builder_chain.invoke(grid_builder_input)
+
+            print("✓ Grid Builder complete\n")
+            print("=== GRID BUILDER OUTPUT (Performance Grid) ===")
+            print(json.dumps(grid_builder_output.model_dump(), indent=2))
+            print("===============================================\n")
+
+            # Step 4: Display final TTS prompt
+            print("=== FINAL TTS PROMPT ===")
+            print(grid_builder_output.tts_prompt)
+            print("========================\n")
+
+            # Step 5: Generate music using ElevenLabs
+            print("🎼 Step 3: Generating music with ElevenLabs...")
+            input("Press Enter to call ElevenLabs API (or Ctrl+C to cancel)...")
             music_file_path = None
+            try:
+                music_file_path = generate_music(
+                    tts_prompt=grid_builder_output.tts_prompt,
+                    seconds=self.seconds,
+                    api_key=self.elevenlabs_api_key
+                )
+                print(f"✓ Music file saved: {music_file_path}\n")
 
-        print("✓ Pipeline complete!")
+                # Load the AI response audio and schedule overlay at next bar
+                response_audio = load_audio_file(music_file_path)
 
-        return {
-            "lyricist_output": lyricist_output,
-            "grid_builder_output": grid_builder_output,
-            "music_file_path": music_file_path
-        }
+                # Calculate sample position for next bar boundary
+                wait_ms = self.mixer.beat_tracker.ms_until_next_bar()
+                insert_sample = self.mixer.get_current_sample() + int(wait_ms * SAMPLE_RATE / 1000)
+
+                print(f"Scheduling AI response at next bar ({wait_ms:.0f}ms)...")
+                self.mixer.schedule_overlay(response_audio, insert_sample)
+
+                # Wait for overlay to finish playing
+                overlay_duration_ms = len(response_audio) / SAMPLE_RATE * 1000
+                total_wait_ms = wait_ms + overlay_duration_ms
+                print(f"Playing AI response ({overlay_duration_ms:.0f}ms duration)...")
+                time.sleep(total_wait_ms / 1000)
+
+            except Exception as e:
+                print(f"⚠️  Music generation failed: {e}")
+                print("   Continuing without audio output...\n")
+
+            print("✓ Pipeline complete!")
+
+            return {
+                "lyricist_output": lyricist_output,
+                "grid_builder_output": grid_builder_output,
+                "music_file_path": music_file_path
+            }
+
+        finally:
+            # Ensure mixer is stopped on exit (normal or exception)
+            self.mixer.stop()
 
 
 # ============================================================================

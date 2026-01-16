@@ -64,3 +64,7 @@ We want a consistent “battle session” experience where the same instrumental
   - `OPENAI_API_KEY`
   - `ELEVENLABS_API_KEY` (and any other ElevenLabs-required env vars)
 - Avoid logging sensitive user content by default (including raw audio and full transcriptions).
+
+
+# For Frontend development/design
+You MUST follow visual_style_guide.md and keep good practices. Use React as your framework. Make use of components. Consider the audio feature is n important part of this web.
