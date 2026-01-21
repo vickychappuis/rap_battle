@@ -1,0 +1,262 @@
+{
+  "timestamp": "2026-01-21T00:05:24.175122",
+  "config": {
+    "model": "gpt-5-mini",
+    "bpm": 90,
+    "seconds": 10.0,
+    "grid_beats": 15,
+    "opponent_bars": "I hear you talkin' shit, bro you think you're the heat. Please bow down to defeat you're barely mince meat. Stop with the street talk, and start to do the street walk. Lock yourself in and tell me this, how you gonna battle with this sick shit that I spit bitch"
+  },
+  "two_agent": {
+    "approach": "two-agent",
+    "success": true,
+    "timing": {
+      "lyricist_seconds": 8.08,
+      "grid_builder_seconds": 13.35,
+      "total_seconds": 21.43
+    },
+    "validation": {
+      "lyricist": {
+        "valid": true,
+        "issues": []
+      },
+      "grid_builder": {
+        "valid": true,
+        "issues": [],
+        "warnings": []
+      }
+    },
+    "outputs": {
+      "lyricist": {
+        "grid_beats": 15,
+        "beats": [
+          "I hear",
+          "your noise",
+          "talk loud",
+          "sound weak",
+          "mince meat",
+          "no heat",
+          "I cook",
+          "with verbs",
+          "blade lines",
+          "slice deep",
+          "street talk",
+          "street walk",
+          "flip scripts",
+          "crowns drop",
+          "REIGN"
+        ]
+      },
+      "grid_builder": {
+        "ms_per_beat": 666.67,
+        "performance_grid": [
+          {
+            "beat": 1,
+            "bar": 1,
+            "beat_in_bar": 1,
+            "text": "I hear"
+          },
+          {
+            "beat": 2,
+            "bar": 1,
+            "beat_in_bar": 2,
+            "text": "your noise"
+          },
+          {
+            "beat": 3,
+            "bar": 1,
+            "beat_in_bar": 3,
+            "text": "talk loud"
+          },
+          {
+            "beat": 4,
+            "bar": 1,
+            "beat_in_bar": 4,
+            "text": "sound weak"
+          },
+          {
+            "beat": 5,
+            "bar": 2,
+            "beat_in_bar": 1,
+            "text": "mince meat"
+          },
+          {
+            "beat": 6,
+            "bar": 2,
+            "beat_in_bar": 2,
+            "text": "no heat"
+          },
+          {
+            "beat": 7,
+            "bar": 2,
+            "beat_in_bar": 3,
+            "text": "I cook"
+          },
+          {
+            "beat": 8,
+            "bar": 2,
+            "beat_in_bar": 4,
+            "text": "with verbs"
+          },
+          {
+            "beat": 9,
+            "bar": 3,
+            "beat_in_bar": 1,
+            "text": "blade lines"
+          },
+          {
+            "beat": 10,
+            "bar": 3,
+            "beat_in_bar": 2,
+            "text": "slice deep"
+          },
+          {
+            "beat": 11,
+            "bar": 3,
+            "beat_in_bar": 3,
+            "text": "street talk"
+          },
+          {
+            "beat": 12,
+            "bar": 3,
+            "beat_in_bar": 4,
+            "text": "street walk"
+          },
+          {
+            "beat": 13,
+            "bar": 4,
+            "beat_in_bar": 1,
+            "text": "flip scripts"
+          },
+          {
+            "beat": 14,
+            "bar": 4,
+            "beat_in_bar": 2,
+            "text": "crowns drop"
+          },
+          {
+            "beat": 15,
+            "bar": 4,
+            "beat_in_bar": 3,
+            "text": "REIGN"
+          }
+        ],
+        "plain_take": "I hear your noise talk loud sound weak mince meat no heat I cook with verbs blade lines slice deep street talk street walk flip scripts crowns drop REIGN",
+        "tts_prompt": "Original male rap acapella ONLY. 90 BPM, 4/4. Length: 10.0s (exact), deliver as one clean take.\n\nPerformance grid (exact timing):\nBeat 1 (Bar 1, beat 1): I hear\nBeat 2 (Bar 1, beat 2): your noise\nBeat 3 (Bar 1, beat 3): talk loud\nBeat 4 (Bar 1, beat 4): sound weak\nBeat 5 (Bar 2, beat 1): mince meat\nBeat 6 (Bar 2, beat 2): no heat\nBeat 7 (Bar 2, beat 3): I cook\nBeat 8 (Bar 2, beat 4): with verbs\nBeat 9 (Bar 3, beat 1): blade lines\nBeat 10 (Bar 3, beat 2): slice deep\nBeat 11 (Bar 3, beat 3): street talk\nBeat 12 (Bar 3, beat 4): street walk\nBeat 13 (Bar 4, beat 1): flip scripts\nBeat 14 (Bar 4, beat 2): crowns drop\nBeat 15 (Bar 4, beat 3): REIGN\n\nClean take:\nI hear your noise talk loud sound weak mince meat no heat I cook with verbs blade lines slice deep street talk street walk flip scripts crowns drop REIGN"
+      }
+    }
+  },
+  "single_agent": {
+    "approach": "single-agent",
+    "success": true,
+    "timing": {
+      "unified_seconds": 21.85
+    },
+    "validation": {
+      "unified": {
+        "valid": true,
+        "issues": [],
+        "warnings": []
+      }
+    },
+    "outputs": {
+      "unified": {
+        "ms_per_beat": 666.67,
+        "performance_grid": [
+          {
+            "beat": 1,
+            "bar": 1,
+            "beat_in_bar": 1,
+            "text": "Bow down"
+          },
+          {
+            "beat": 2,
+            "bar": 1,
+            "beat_in_bar": 2,
+            "text": "nah watch"
+          },
+          {
+            "beat": 3,
+            "bar": 1,
+            "beat_in_bar": 3,
+            "text": "how I"
+          },
+          {
+            "beat": 4,
+            "bar": 1,
+            "beat_in_bar": 4,
+            "text": "flip scripts"
+          },
+          {
+            "beat": 5,
+            "bar": 2,
+            "beat_in_bar": 1,
+            "text": "You spit"
+          },
+          {
+            "beat": 6,
+            "bar": 2,
+            "beat_in_bar": 2,
+            "text": "paper flames"
+          },
+          {
+            "beat": 7,
+            "bar": 2,
+            "beat_in_bar": 3,
+            "text": "no heat"
+          },
+          {
+            "beat": 8,
+            "bar": 2,
+            "beat_in_bar": 4,
+            "text": "just smoke"
+          },
+          {
+            "beat": 9,
+            "bar": 3,
+            "beat_in_bar": 1,
+            "text": "Street talk"
+          },
+          {
+            "beat": 10,
+            "bar": 3,
+            "beat_in_bar": 2,
+            "text": "but I'm"
+          },
+          {
+            "beat": 11,
+            "bar": 3,
+            "beat_in_bar": 3,
+            "text": "street proof"
+          },
+          {
+            "beat": 12,
+            "bar": 3,
+            "beat_in_bar": 4,
+            "text": "grown rules"
+          },
+          {
+            "beat": 13,
+            "bar": 4,
+            "beat_in_bar": 1,
+            "text": "Mince meat?"
+          },
+          {
+            "beat": 14,
+            "bar": 4,
+            "beat_in_bar": 2,
+            "text": "I feast"
+          },
+          {
+            "beat": 15,
+            "bar": 4,
+            "beat_in_bar": 3,
+            "text": "Check"
+          }
+        ],
+        "plain_take": "Bow down nah watch how I flip scripts You spit paper flames no heat just smoke Street talk but I'm street proof grown rules Mince meat? I feast Check",
+        "tts_prompt": "Original male rap acapella ONLY. 90 BPM, 4/4. Length: 10.0s (exact), deliver as one clean take.\n\nPerformance grid (exact timing):\nBeat 1 (Bar 1, beat 1): Bow down\nBeat 2 (Bar 1, beat 2): nah watch\nBeat 3 (Bar 1, beat 3): how I\nBeat 4 (Bar 1, beat 4): flip scripts\nBeat 5 (Bar 2, beat 1): You spit\nBeat 6 (Bar 2, beat 2): paper flames\nBeat 7 (Bar 2, beat 3): no heat\nBeat 8 (Bar 2, beat 4): just smoke\nBeat 9 (Bar 3, beat 1): Street talk\nBeat 10 (Bar 3, beat 2): but I'm\nBeat 11 (Bar 3, beat 3): street proof\nBeat 12 (Bar 3, beat 4): grown rules\nBeat 13 (Bar 4, beat 1): Mince meat?\nBeat 14 (Bar 4, beat 2): I feast\nBeat 15 (Bar 4, beat 3): Check\n\nClean take:\nBow down nah watch how I flip scripts You spit paper flames no heat just smoke Street talk but I'm street proof grown rules Mince meat? I feast Check"
+      }
+    }
+  }
+}
