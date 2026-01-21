@@ -25,6 +25,7 @@ class TurnData(BaseModel):
     transcription: Optional[str] = None  # User turns
     lyrics: Optional[str] = None  # AI turns
     audio_url: Optional[str] = None  # AI turns
+    timing: Optional[dict] = None  # Timing data for AI turns
 
 
 class SessionCreate(BaseModel):
@@ -53,3 +54,4 @@ class SessionStatus(BaseModel):
     ai_audio_url: Optional[str] = None
     error: Optional[str] = None
     retry_count: int = 0
+    timing: Optional[dict] = None  # Timing data for current turn

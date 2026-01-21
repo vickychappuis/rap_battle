@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-01-20 23:22:24",
+  "config": {
+    "model": "gpt-5-mini",
+    "bpm": 90,
+    "seconds": 10.0,
+    "grid_beats": 15
+  },
+  "timings": {
+    "lyricist_seconds": 6.51,
+    "grid_builder_seconds": 12.19,
+    "total_seconds": 18.7
+  },
+  "lyricist_output": {
+    "grid_beats": 15,
+    "num_beats": 15
+  },
+  "grid_builder_output": {
+    "ms_per_beat": 666.67,
+    "grid_length": 15
+  }
+}

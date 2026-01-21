@@ -376,6 +376,7 @@ class RapBattleOrchestrator:
 
             # Step 1: Invoke the Lyricist
             print("📝 Lyricist: Generating beat-by-beat lyrics...")
+            lyricist_start = time.time()
 
             lyricist_input = {
                 "opponent_bars": self.opponent_bars,
@@ -387,8 +388,9 @@ class RapBattleOrchestrator:
             }
 
             lyricist_output = self.lyricist_chain.invoke(lyricist_input)
+            lyricist_duration = time.time() - lyricist_start
 
-            print("✓ Lyricist complete\n")
+            print(f"✓ Lyricist complete in {lyricist_duration:.2f}s\n")
             print("=== LYRICIST OUTPUT (Beat-by-Beat Lyrics) ===")
             print(json.dumps(lyricist_output.model_dump(), indent=2))
             print("=============================================\n")
@@ -400,6 +402,7 @@ class RapBattleOrchestrator:
 
             # Step 3: Invoke Grid Builder
             print("🎵 Grid Builder: Building performance grid...")
+            grid_builder_start = time.time()
 
             grid_builder_input = {
                 "lyricist_json": json.dumps(lyricist_output.model_dump(), indent=2),
@@ -409,8 +412,9 @@ class RapBattleOrchestrator:
             }
 
             grid_builder_output = self.grid_builder_chain.invoke(grid_builder_input)
+            grid_builder_duration = time.time() - grid_builder_start
 
-            print("✓ Grid Builder complete\n")
+            print(f"✓ Grid Builder complete in {grid_builder_duration:.2f}s\n")
             print("=== GRID BUILDER OUTPUT (Performance Grid) ===")
             print(json.dumps(grid_builder_output.model_dump(), indent=2))
             print("===============================================\n")
@@ -467,12 +471,30 @@ class RapBattleOrchestrator:
                 print(f"⚠️  Music generation failed: {e}")
                 print("   Continuing without audio output...\n")
 
+            # Calculate total agent timing
+            total_agent_time = lyricist_duration + grid_builder_duration
+
+            # Print timing summary
+            print("\n" + "=" * 70)
+            print("⏱️  AGENT TIMING SUMMARY")
+            print("=" * 70)
+            print(f"Lyricist:      {lyricist_duration:>8.2f}s  ({lyricist_duration/total_agent_time*100:>5.1f}%)")
+            print(f"Grid Builder:  {grid_builder_duration:>8.2f}s  ({grid_builder_duration/total_agent_time*100:>5.1f}%)")
+            print("─" * 70)
+            print(f"Total:         {total_agent_time:>8.2f}s  (100.0%)")
+            print("=" * 70 + "\n")
+
             print("✓ Pipeline complete!")
 
             return {
                 "lyricist_output": lyricist_output,
                 "grid_builder_output": grid_builder_output,
-                "music_file_path": music_file_path
+                "music_file_path": music_file_path,
+                "timing": {
+                    "lyricist_seconds": round(lyricist_duration, 2),
+                    "grid_builder_seconds": round(grid_builder_duration, 2),
+                    "total_seconds": round(total_agent_time, 2)
+                }
             }
 
         finally:
