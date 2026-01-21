@@ -1,0 +1,184 @@
+/* CSS Variables from visual style guide */
+:root {
+  --ink-black: #111111;
+  --paper-cream: #F2E8D5;
+  --xerox-gray: #B9B2A6;
+  --marker-red: #E11D48;
+
+  --font-headline: 'Bebas Neue', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+/* Reset and base styles */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--paper-cream);
+  color: var(--ink-black);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-headline);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 400;
+}
+
+h1 {
+  font-size: 3rem;
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+code, pre, .mono {
+  font-family: var(--font-mono);
+}
+
+/* Brutalist borders */
+.border-brutal {
+  border: 3px solid var(--ink-black);
+}
+
+/* Button base */
+button {
+  font-family: var(--font-headline);
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 3px solid var(--ink-black);
+  background: var(--paper-cream);
+  padding: 0.75rem 1.5rem;
+  font-size: 1.25rem;
+  transition: all 0.1s ease;
+}
+
+button:hover {
+  background: var(--ink-black);
+  color: var(--paper-cream);
+}
+
+button:active {
+  transform: translate(2px, 2px);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  background: var(--paper-cream);
+  color: var(--ink-black);
+}
+
+/* Recording state */
+.recording {
+  color: var(--marker-red);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Container */
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Card */
+.card {
+  background: var(--paper-cream);
+  border: 3px solid var(--ink-black);
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Grid layout */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Flex utilities */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.gap-1 {
+  gap: 0.5rem;
+}
+
+.gap-2 {
+  gap: 1rem;
+}
+
+.gap-4 {
+  gap: 2rem;
+}
+
+/* Text utilities */
+.text-center {
+  text-align: center;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.text-lg {
+  font-size: 1.25rem;
+}
+
+.text-red {
+  color: var(--marker-red);
+}
+
+.text-gray {
+  color: var(--xerox-gray);
+}
+
+/* Spacing */
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-4 { margin-top: 2rem; }
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-4 { margin-bottom: 2rem; }
+.p-1 { padding: 0.5rem; }
+.p-2 { padding: 1rem; }
+.p-4 { padding: 2rem; }

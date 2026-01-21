@@ -7,6 +7,7 @@ Provides:
 - load_audio_file: Load MP3/WAV into numpy array for mixing
 """
 
+import os
 import time
 import threading
 import numpy as np
@@ -22,7 +23,7 @@ from pathlib import Path
 
 SAMPLE_RATE = 44100  # Standard audio sample rate
 CHANNELS = 2  # Stereo output
-DUCK_FACTOR = 0.7  # Volume reduction for base track during overlay
+DUCK_FACTOR = float(os.environ.get("DUCK_FACTOR", 0.7))  # Volume reduction for base track during overlay
 
 
 # ============================================================================

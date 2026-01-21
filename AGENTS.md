@@ -11,12 +11,14 @@ High-level flow (target architecture):
 3. An AI agent generates a rap response (lyrics). ✅ implemented
 4. Another agent converts the lyrics into an ElevenLabs-ready prompt (lyrics divided per beat). ✅ implemented
 5. ElevenLabs generates audio/music from the formatted prompt. ✅ implemented
-6. **NEW (next):** Start a base instrumental immediately when the user starts, keep it playing through the whole pipeline, then insert the ElevenLabs audio at the next best beat/bar moment. 🔜 next
+6. Start a base instrumental immediately when the user starts, keep it playing through the whole pipeline, then insert the ElevenLabs audio at the next best beat/bar moment. ✅ implemented
+7. **NEW (next):** Web front-end that shows the pipeline + session playback in real time. 🔜 next
 
 Current focus is a **POC**. We’re building incrementally and keeping the scope tight.
 
 ## Technologies
 
+### Backend
 - Python
 - OpenAI
   - Speech-to-text (STT) for transcribing the user’s spoken bars
@@ -24,15 +26,49 @@ Current focus is a **POC**. We’re building incrementally and keeping the scope
 - ElevenLabs (audio/music generation)
 - LangChain (agent/prompt orchestration)
 
-## Current focus (base track playback + scheduled insert)
+### Frontend (NEW)
+- React (web UI)
+- Browser audio:
+  - Record user audio (mic)
+  - Play the base instrumental continuously during the session
+  - Insert/play the ElevenLabs response at the scheduled beat/bar moment
 
-We want a consistent “battle session” experience where the same instrumental plays continuously:
+## Current focus (web UI that shows the pipeline)
 
-- When the user begins recording / the pipeline starts, **start playing the base hip-hop instrumental immediately**.
-- The base track **keeps playing** while we transcribe (STT), generate the rap response, format the prompt, and call ElevenLabs.
-- When the ElevenLabs audio is ready, **save it**, then **wait to place/play it at the next best moment** (e.g., next beat or next bar).
-  - This moment should be **planned/recorded** using the known BPM (we don’t care if the user is perfectly on beat; we just want predictable placement).
-- The goal is that the user can rap over the beat, and the AI response comes in cleanly at a natural musical boundary.
+We don’t have a frontend yet. Next step is a minimal React web app that exposes what we already have:
+
+**What the web app should do (POC scope):**
+- Start a “battle session”
+- Let the user record spoken bars
+- Show pipeline progress (STT → AI lyrics → beat formatting → ElevenLabs generation)
+- Keep the **base instrumental playing** through the entire pipeline
+- When ElevenLabs audio is ready, play it at the **next scheduled beat/bar moment** (BPM-based placement)
+- Display:
+  - transcription text
+  - AI response lyrics
+  - formatted “per beat” prompt (optional but useful for debugging)
+
+**What the web app should NOT do yet:**
+- No accounts/auth
+- No feeds/sharing
+- No session history library
+- No extra features beyond “show what we have for now”
+
+## Audio behavior (frontend expectations)
+
+- The frontend should treat the session as a single continuous musical timeline.
+- Base instrumental starts immediately when the session starts and does not stop during:
+  - recording
+  - transcription
+  - AI generation
+  - formatting
+  - ElevenLabs audio generation
+- When the backend indicates the ElevenLabs audio is ready, the frontend:
+  - stores it (or receives a URL)
+  - waits until the next planned musical boundary (beat/bar based on known BPM)
+  - plays it cleanly on the boundary
+
+Implementation note (POC): the UI can initially rely on simple timing (BPM + session start time). If tighter sync is needed later, we can move scheduling to a more precise audio-clock approach.
 
 ## Status
 
@@ -40,13 +76,15 @@ We want a consistent “battle session” experience where the same instrumental
 - ElevenLabs prompt formatting (per beat): ✅ implemented
 - ElevenLabs audio/music generation (API): ✅ implemented
 - OpenAI STT (audio → text): ✅ implemented
-- **Base instrumental session playback + scheduled ElevenLabs insert (BPM-based): 🔜 next**
+- Base instrumental session playback + scheduled ElevenLabs insert (BPM-based): ✅ implemented
+- Web frontend (React) to show the pipeline + session playback: 🔜 next
 
 ## Repository conventions
 
 - Keep agent logic modular and easy to test.
 - Keep prompting/templates easy to locate and edit.
 - Prefer clear, small changes over large refactors (POC pace).
+- **Frontend:** follow `visual_style_guide.md` exactly. Do not expand or add new design rules—just implement what exists.
 
 ## Documentation
 
@@ -57,6 +95,7 @@ We want a consistent “battle session” experience where the same instrumental
 
 - All Python dependencies must be declared in `requirements.txt`.
 - Avoid adding new dependencies unless the task explicitly requires it.
+- Frontend dependencies should be kept minimal (POC).
 
 ## Configuration & secrets
 
@@ -65,6 +104,9 @@ We want a consistent “battle session” experience where the same instrumental
   - `ELEVENLABS_API_KEY` (and any other ElevenLabs-required env vars)
 - Avoid logging sensitive user content by default (including raw audio and full transcriptions).
 
+## Frontend development/design notes
 
-# For Frontend development/design
-You MUST follow visual_style_guide.md and keep good practices. Use React as your framework. Make use of components. Consider the audio feature is n important part of this web.
+- Use React as the framework.
+- Make use of components.
+- Audio is a core feature of the web experience, not an afterthought.
+- The primary goal is to **visualize the pipeline state** and **experience the continuous beat + scheduled AI insert**.

@@ -10,8 +10,6 @@ import os
 import tempfile
 from pathlib import Path
 
-import sounddevice as sd
-import soundfile as sf
 from openai import OpenAI
 
 
@@ -30,7 +28,15 @@ def record_audio(
 
     Returns:
         Path to the recorded audio file (WAV format)
+
+    Note:
+        Requires sounddevice and soundfile packages, plus PortAudio system library.
+        Only used for local CLI recording, not needed for API (browser records audio).
     """
+    # Lazy import - these require PortAudio which may not be available in Docker
+    import sounddevice as sd
+    import soundfile as sf
+
     if output_path is None:
         # Create temp file that won't be auto-deleted
         fd, output_path = tempfile.mkstemp(suffix=".wav")

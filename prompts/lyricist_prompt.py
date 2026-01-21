@@ -4,23 +4,66 @@ Lyricist Prompt Template
 This agent generates battle rap lyrics with precise timing constraints.
 """
 
+from typing import List, Optional
+from dataclasses import dataclass
+
+
+@dataclass
+class TurnData:
+    """Data for a single turn in the battle."""
+    turn_number: int
+    player: str  # "user" | "ai"
+    transcription: Optional[str] = None
+    lyrics: Optional[str] = None
+
+
+# Turn-specific instructions based on which AI turn this is
+TURN_INSTRUCTIONS = {
+    1: "This is your opening response. Establish your style, counter their intro, and set the tone for the battle.",
+    2: "Final round. Reference the entire battle, hit your hardest bars, and close it out strong. Make it memorable.",
+}
+
+
+def build_battle_context(turn_history: List[TurnData]) -> str:
+    """Build a summary of previous battle exchanges for context."""
+    if not turn_history:
+        return "This is the opening exchange."
+
+    context = "Previous exchanges:\n"
+    for turn in turn_history:
+        round_num = (turn.turn_number + 1) // 2
+        if turn.player == "user":
+            context += f"\nUser (Round {round_num}):\n\"{turn.transcription}\"\n"
+        else:
+            context += f"\nYou (Round {round_num}):\n\"{turn.lyrics}\"\n"
+    return context
+
+
 LYRICIST_PROMPT_TEMPLATE = """# Battle Rap Lyricist AI
 
-You are a battle rap lyricist AI. Your task is to write an original rap response to the opponent's bars, structured **beat-by-beat**.
+You are a battle rap lyricist in a {total_turns}-turn battle.
 
-## Opponent's Bars
+## Battle History
+{battle_context}
+
+## Current Turn ({turn_number} of {total_turns})
+
+Your opponent just said:
 ```
 {opponent_bars}
 ```
+
+## Turn Strategy
+{turn_instructions}
 
 ## Timing Constraints
 
 | Parameter | Value |
 |-----------|-------|
 | **BPM** | {bpm} |
-| **Total seconds** | {seconds} |
-| **Time signature** | 4/4 |
+| **Bars** | {bars} |
 | **Grid beats** | {grid_beats} |
+| **Total seconds** | {seconds:.1f} |
 | **Target density** | ~2 words per beat (normal rap flow) |
 | **Last beat** | 1 held word (for clean ending) |
 

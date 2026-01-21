@@ -1,0 +1,33 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      # Hot reload: mount source code
+      - .:/app
+      # Prevent overwriting container's venv
+      - /app/.venv
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      # Hot reload: mount source code
+      - ./frontend:/app
+      # Prevent overwriting container's node_modules
+      - /app/node_modules
+    depends_on:
+      - api
+    environment:
+      # Point Vite proxy to api service
+      - VITE_API_URL=http://api:8000

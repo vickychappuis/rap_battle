@@ -5,7 +5,13 @@ Contains all agent prompt templates.
 Each agent has its own prompt file.
 """
 
-from .lyricist_prompt import LYRICIST_PROMPT_TEMPLATE, LYRICIST_METADATA
+from .lyricist_prompt import (
+    LYRICIST_PROMPT_TEMPLATE,
+    LYRICIST_METADATA,
+    TURN_INSTRUCTIONS,
+    TurnData,
+    build_battle_context,
+)
 from .grid_builder_prompt import GRID_BUILDER_PROMPT_TEMPLATE, GRID_BUILDER_METADATA
 
 PROMPT_METADATA = {
@@ -18,5 +24,8 @@ __all__ = [
     "GRID_BUILDER_PROMPT_TEMPLATE",
     "LYRICIST_METADATA",
     "GRID_BUILDER_METADATA",
-    "PROMPT_METADATA"
+    "PROMPT_METADATA",
+    "TURN_INSTRUCTIONS",
+    "TurnData",
+    "build_battle_context",
 ]
