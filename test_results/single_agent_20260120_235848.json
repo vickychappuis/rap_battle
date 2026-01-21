@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-01-20 23:58:48",
+  "approach": "single-agent",
+  "config": {
+    "model": "gpt-5-mini",
+    "bpm": 90,
+    "seconds": 10.0,
+    "grid_beats": 15
+  },
+  "timings": {
+    "unified_seconds": 18.76
+  },
+  "output": {
+    "ms_per_beat": 666.67,
+    "grid_length": 15
+  }
+}
