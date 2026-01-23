@@ -46,7 +46,6 @@ from typing import List, Optional
 from datetime import datetime
 from pathlib import Path
 import requests
-from pydantic import BaseModel, Field, field_validator
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
@@ -55,8 +54,14 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+# Import models
+from models import LyricistOutput, PerformanceBeat, GridBuilderOutput
+
 # Import prompts from prompts module
-from prompts import LYRICIST_PROMPT_TEMPLATE, GRID_BUILDER_PROMPT_TEMPLATE
+from prompts import LYRICIST_PROMPT_TEMPLATE
+
+# Import Python GridBuilder (replaces LLM-based Grid Builder agent)
+from grid_builder_python import build_grid_from_lyrics
 
 
 # ============================================================================
@@ -64,47 +69,6 @@ from prompts import LYRICIST_PROMPT_TEMPLATE, GRID_BUILDER_PROMPT_TEMPLATE
 # ============================================================================
 
 ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/music/detailed"
-
-
-# ============================================================================
-# PYDANTIC MODELS (Agent Output Schemas)
-# ============================================================================
-
-class LyricistOutput(BaseModel):
-    """Schema for Lyricist agent output - beat-based format"""
-    grid_beats: int = Field(description="Total beats in the response")
-    beats: List[str] = Field(description="List of beat texts, one per beat")
-
-    @field_validator('beats')
-    @classmethod
-    def validate_beats(cls, v, info):
-        """Validate beat list - lenient validation, just check basics"""
-        # Don't strictly validate beat count here - we'll fix it in validate_lyricist_output
-        # Just check each beat has reasonable content
-        for i, beat in enumerate(v):
-            word_count = len(beat.split())
-            # Allow 1-4 words per beat (flexible)
-            if word_count < 1 or word_count > 4:
-                # Just warn, don't fail
-                pass
-
-        return v
-
-
-class PerformanceBeat(BaseModel):
-    """Single beat in the performance grid"""
-    beat: int = Field(description="Beat number (1-indexed)")
-    bar: int = Field(description="Bar number (1-indexed)")
-    beat_in_bar: int = Field(description="Beat within the bar (1-4)")
-    text: str = Field(description="Text to deliver on this beat")
-
-
-class GridBuilderOutput(BaseModel):
-    """Schema for Grid Builder agent output"""
-    ms_per_beat: float = Field(description="Milliseconds per beat")
-    performance_grid: List[PerformanceBeat] = Field(description="Beat-by-beat performance grid")
-    plain_take: str = Field(description="Single concatenated text in delivery order")
-    tts_prompt: str = Field(description="Final TTS prompt string")
 
 
 # ============================================================================
@@ -234,29 +198,6 @@ def create_lyricist_agent(model_name: str = "gpt-4o-mini"):
 
 
 # ============================================================================
-# GRID BUILDER AGENT
-# ============================================================================
-
-def create_grid_builder_agent(model_name: str = "gpt-4o-mini"):
-    """Create the Grid Builder agent"""
-    parser = PydanticOutputParser(pydantic_object=GridBuilderOutput)
-
-    prompt = ChatPromptTemplate.from_template(GRID_BUILDER_PROMPT_TEMPLATE)
-
-    llm = ChatOpenAI(
-        model="gpt-5-mini",
-        reasoning={"effort": "low"},      # optional: add "summary": "auto"
-        output_version="responses/v1",    # keep reasoning blocks in message content
-        temperature=0,  # Deterministic for grid building
-        model_kwargs={"response_format": {"type": "json_object"}}
-    )
-
-    chain = prompt | llm | parser
-
-    return chain, parser
-
-
-# ============================================================================
 # ORCHESTRATOR
 # ============================================================================
 
@@ -295,9 +236,8 @@ class RapBattleOrchestrator:
         # Compute timing constraints
         self._compute_timing()
 
-        # Create agents
+        # Create lyricist agent (Grid Builder is now pure Python)
         self.lyricist_chain, self.lyricist_parser = create_lyricist_agent(self.model)
-        self.grid_builder_chain, self.grid_builder_parser = create_grid_builder_agent(self.model)
 
     def _get_opponent_bars(self) -> str:
         """
@@ -376,6 +316,7 @@ class RapBattleOrchestrator:
 
             # Step 1: Invoke the Lyricist
             print("📝 Lyricist: Generating beat-by-beat lyrics...")
+            lyricist_start = time.time()
 
             lyricist_input = {
                 "opponent_bars": self.opponent_bars,
@@ -387,8 +328,9 @@ class RapBattleOrchestrator:
             }
 
             lyricist_output = self.lyricist_chain.invoke(lyricist_input)
+            lyricist_duration = time.time() - lyricist_start
 
-            print("✓ Lyricist complete\n")
+            print(f"✓ Lyricist complete in {lyricist_duration:.2f}s\n")
             print("=== LYRICIST OUTPUT (Beat-by-Beat Lyrics) ===")
             print(json.dumps(lyricist_output.model_dump(), indent=2))
             print("=============================================\n")
@@ -398,19 +340,16 @@ class RapBattleOrchestrator:
             validate_lyricist_output(lyricist_output, self.grid_beats)
             print()
 
-            # Step 3: Invoke Grid Builder
-            print("🎵 Grid Builder: Building performance grid...")
+            # Step 3: Build Grid (Python - instant)
+            print("🎵 Grid Builder: Building performance grid (Python)...")
+            grid_builder_start = time.time()
 
-            grid_builder_input = {
-                "lyricist_json": json.dumps(lyricist_output.model_dump(), indent=2),
-                "bpm": self.bpm,
-                "seconds": self.seconds,
-                "format_instructions": self.grid_builder_parser.get_format_instructions()
-            }
+            grid_builder_output = build_grid_from_lyrics(
+                lyricist_output, self.bpm, self.seconds
+            )
+            grid_builder_duration = time.time() - grid_builder_start
 
-            grid_builder_output = self.grid_builder_chain.invoke(grid_builder_input)
-
-            print("✓ Grid Builder complete\n")
+            print(f"✓ Grid Builder complete in {grid_builder_duration:.4f}s\n")
             print("=== GRID BUILDER OUTPUT (Performance Grid) ===")
             print(json.dumps(grid_builder_output.model_dump(), indent=2))
             print("===============================================\n")
@@ -467,12 +406,30 @@ class RapBattleOrchestrator:
                 print(f"⚠️  Music generation failed: {e}")
                 print("   Continuing without audio output...\n")
 
+            # Calculate total agent timing
+            total_agent_time = lyricist_duration + grid_builder_duration
+
+            # Print timing summary
+            print("\n" + "=" * 70)
+            print("⏱️  AGENT TIMING SUMMARY")
+            print("=" * 70)
+            print(f"Lyricist:      {lyricist_duration:>8.2f}s  ({lyricist_duration/total_agent_time*100:>5.1f}%)")
+            print(f"Grid Builder:  {grid_builder_duration:>8.2f}s  ({grid_builder_duration/total_agent_time*100:>5.1f}%)")
+            print("─" * 70)
+            print(f"Total:         {total_agent_time:>8.2f}s  (100.0%)")
+            print("=" * 70 + "\n")
+
             print("✓ Pipeline complete!")
 
             return {
                 "lyricist_output": lyricist_output,
                 "grid_builder_output": grid_builder_output,
-                "music_file_path": music_file_path
+                "music_file_path": music_file_path,
+                "timing": {
+                    "lyricist_seconds": round(lyricist_duration, 2),
+                    "grid_builder_seconds": round(grid_builder_duration, 2),
+                    "total_seconds": round(total_agent_time, 2)
+                }
             }
 
         finally:

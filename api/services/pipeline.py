@@ -9,6 +9,7 @@ import os
 import json
 import tempfile
 import threading
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -26,19 +27,17 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from stt import transcribe_audio
 from prompts import (
     LYRICIST_PROMPT_TEMPLATE,
-    GRID_BUILDER_PROMPT_TEMPLATE,
     TURN_INSTRUCTIONS,
     TurnData as PromptTurnData,
     build_battle_context,
 )
+from models import LyricistOutput, GridBuilderOutput
 from main import (
-    LyricistOutput,
-    GridBuilderOutput,
     create_lyricist_agent,
-    create_grid_builder_agent,
     validate_lyricist_output,
     generate_music,
 )
+from grid_builder_python import build_grid_from_lyrics
 from api.models.session import PipelineStep, TurnData
 
 
@@ -65,6 +64,7 @@ class SessionState:
     lyrics: Optional[str] = None
     ai_audio_url: Optional[str] = None
     error: Optional[str] = None
+    timing: Optional[dict] = None
 
     # Internal state
     audio_path: Optional[str] = None
@@ -96,6 +96,7 @@ class SessionState:
         self.lyrics = None
         self.ai_audio_url = None
         self.error = None
+        self.timing = None
         self.lyricist_output = None
         self.grid_builder_output = None
 
@@ -112,9 +113,8 @@ class PipelineService:
         self.elevenlabs_api_key = os.environ.get("ELEVENLABS_API_KEY")
         self.model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
-        # Create agents
+        # Create lyricist agent (Grid Builder is now pure Python)
         self.lyricist_chain, self.lyricist_parser = create_lyricist_agent(self.model)
-        self.grid_builder_chain, self.grid_builder_parser = create_grid_builder_agent(self.model)
 
     def start_pipeline(self, session: SessionState, audio_path: str) -> None:
         """Start the pipeline in a background thread."""
@@ -126,9 +126,17 @@ class PipelineService:
     def _run_pipeline(self, session: SessionState) -> None:
         """Run the full pipeline (called in background thread)."""
         try:
+            # Initialize timing dict
+            session.timing = {}
+            pipeline_start = time.time()
+
             # Step 1: Transcribe audio
             session.step = PipelineStep.TRANSCRIBING
+            transcribe_start = time.time()
             session.transcription = transcribe_audio(session.audio_path)
+            transcribe_duration = time.time() - transcribe_start
+            session.timing['transcription_seconds'] = round(transcribe_duration, 2)
+            print(f"⏱️  Transcription completed in {transcribe_duration:.2f}s")
 
             # Save user turn to history
             user_turn = TurnData(
@@ -141,6 +149,7 @@ class PipelineService:
 
             # Step 2: Generate lyrics with battle context
             session.step = PipelineStep.GENERATING_LYRICS
+            lyricist_start = time.time()
 
             # Convert TurnData (Pydantic) to PromptTurnData (dataclass) for build_battle_context
             prompt_history = [
@@ -172,19 +181,24 @@ class PipelineService:
             session.lyricist_output = self.lyricist_chain.invoke(lyricist_input)
             validate_lyricist_output(session.lyricist_output, session.grid_beats)
 
-            # Build grid
-            grid_builder_input = {
-                "lyricist_json": json.dumps(session.lyricist_output.model_dump(), indent=2),
-                "bpm": session.bpm,
-                "seconds": session.seconds,
-                "format_instructions": self.grid_builder_parser.get_format_instructions()
-            }
+            lyricist_duration = time.time() - lyricist_start
+            session.timing['lyricist_seconds'] = round(lyricist_duration, 2)
+            print(f"⏱️  Lyricist completed in {lyricist_duration:.2f}s")
 
-            session.grid_builder_output = self.grid_builder_chain.invoke(grid_builder_input)
+            # Build grid (Python - instant)
+            grid_builder_start = time.time()
+            session.grid_builder_output = build_grid_from_lyrics(
+                session.lyricist_output, session.bpm, session.seconds
+            )
             session.lyrics = session.grid_builder_output.plain_take
+
+            grid_builder_duration = time.time() - grid_builder_start
+            session.timing['grid_builder_seconds'] = round(grid_builder_duration, 4)
+            print(f"⏱️  Grid Builder completed in {grid_builder_duration:.4f}s")
 
             # Step 3: Generate audio
             session.step = PipelineStep.GENERATING_AUDIO
+            audio_start = time.time()
 
             # Ensure output directory exists
             output_dir = Path(__file__).parent.parent / "static" / "generated"
@@ -215,12 +229,33 @@ class PipelineService:
 
             session.ai_audio_url = f"/static/generated/{output_filename}"
 
-            # Save AI turn to history
+            audio_duration = time.time() - audio_start
+            session.timing['audio_generation_seconds'] = round(audio_duration, 2)
+            print(f"⏱️  Audio generation completed in {audio_duration:.2f}s")
+
+            # Calculate total timing
+            total_duration = time.time() - pipeline_start
+            session.timing['total_seconds'] = round(total_duration, 2)
+
+            # Log timing summary
+            print("\n" + "=" * 70)
+            print(f"⏱️  TIMING SUMMARY (Turn {session.current_turn})")
+            print("=" * 70)
+            print(f"Transcription:     {session.timing['transcription_seconds']:>6.2f}s  ({session.timing['transcription_seconds']/total_duration*100:>5.1f}%)")
+            print(f"Lyricist:          {session.timing['lyricist_seconds']:>6.2f}s  ({session.timing['lyricist_seconds']/total_duration*100:>5.1f}%)")
+            print(f"Grid Builder:      {session.timing['grid_builder_seconds']:>6.2f}s  ({session.timing['grid_builder_seconds']/total_duration*100:>5.1f}%)")
+            print(f"Audio Generation:  {session.timing['audio_generation_seconds']:>6.2f}s  ({session.timing['audio_generation_seconds']/total_duration*100:>5.1f}%)")
+            print("─" * 70)
+            print(f"Total:             {total_duration:>6.2f}s  (100.0%)")
+            print("=" * 70 + "\n")
+
+            # Save AI turn to history with timing
             ai_turn = TurnData(
                 turn_number=session.current_turn,
                 player="ai",
                 lyrics=session.lyrics,
-                audio_url=session.ai_audio_url
+                audio_url=session.ai_audio_url,
+                timing=session.timing.copy()
             )
             session.turn_history.append(ai_turn)
             session.current_turn += 1
