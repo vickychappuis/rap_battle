@@ -27,19 +27,17 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from stt import transcribe_audio
 from prompts import (
     LYRICIST_PROMPT_TEMPLATE,
-    GRID_BUILDER_PROMPT_TEMPLATE,
     TURN_INSTRUCTIONS,
     TurnData as PromptTurnData,
     build_battle_context,
 )
+from models import LyricistOutput, GridBuilderOutput
 from main import (
-    LyricistOutput,
-    GridBuilderOutput,
     create_lyricist_agent,
-    create_grid_builder_agent,
     validate_lyricist_output,
     generate_music,
 )
+from grid_builder_python import build_grid_from_lyrics
 from api.models.session import PipelineStep, TurnData
 
 
@@ -115,9 +113,8 @@ class PipelineService:
         self.elevenlabs_api_key = os.environ.get("ELEVENLABS_API_KEY")
         self.model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
-        # Create agents
+        # Create lyricist agent (Grid Builder is now pure Python)
         self.lyricist_chain, self.lyricist_parser = create_lyricist_agent(self.model)
-        self.grid_builder_chain, self.grid_builder_parser = create_grid_builder_agent(self.model)
 
     def start_pipeline(self, session: SessionState, audio_path: str) -> None:
         """Start the pipeline in a background thread."""
@@ -188,21 +185,16 @@ class PipelineService:
             session.timing['lyricist_seconds'] = round(lyricist_duration, 2)
             print(f"⏱️  Lyricist completed in {lyricist_duration:.2f}s")
 
-            # Build grid
+            # Build grid (Python - instant)
             grid_builder_start = time.time()
-            grid_builder_input = {
-                "lyricist_json": json.dumps(session.lyricist_output.model_dump(), indent=2),
-                "bpm": session.bpm,
-                "seconds": session.seconds,
-                "format_instructions": self.grid_builder_parser.get_format_instructions()
-            }
-
-            session.grid_builder_output = self.grid_builder_chain.invoke(grid_builder_input)
+            session.grid_builder_output = build_grid_from_lyrics(
+                session.lyricist_output, session.bpm, session.seconds
+            )
             session.lyrics = session.grid_builder_output.plain_take
 
             grid_builder_duration = time.time() - grid_builder_start
-            session.timing['grid_builder_seconds'] = round(grid_builder_duration, 2)
-            print(f"⏱️  Grid Builder completed in {grid_builder_duration:.2f}s")
+            session.timing['grid_builder_seconds'] = round(grid_builder_duration, 4)
+            print(f"⏱️  Grid Builder completed in {grid_builder_duration:.4f}s")
 
             # Step 3: Generate audio
             session.step = PipelineStep.GENERATING_AUDIO
