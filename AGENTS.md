@@ -9,7 +9,7 @@ High-level flow (target architecture):
 1. User spits bars (audio input).
 2. Speech → text using OpenAI STT (transcription). ✅ implemented
 3. An AI agent generates a rap response (lyrics). ✅ implemented
-4. Another agent converts the lyrics into an ElevenLabs-ready prompt (lyrics divided per beat). ✅ implemented
+4. Python function converts the lyrics into an ElevenLabs-ready prompt (lyrics divided per beat). ✅ implemented
 5. ElevenLabs generates audio/music from the formatted prompt. ✅ implemented
 6. Start a base instrumental immediately when the user starts, keep it playing through the whole pipeline, then insert the ElevenLabs audio at the next best beat/bar moment. ✅ implemented
 7. **NEW (next):** Web front-end that shows the pipeline + session playback in real time. 🔜 next

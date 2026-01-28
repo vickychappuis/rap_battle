@@ -138,6 +138,11 @@ class PipelineService:
             session.timing['transcription_seconds'] = round(transcribe_duration, 2)
             print(f"⏱️  Transcription completed in {transcribe_duration:.2f}s")
 
+            # Log transcription output
+            print("\n=== OPPONENT BARS (STT Transcription) ===")
+            print(session.transcription)
+            print("==========================================\n")
+
             # Save user turn to history
             user_turn = TurnData(
                 turn_number=session.current_turn,
@@ -185,6 +190,11 @@ class PipelineService:
             session.timing['lyricist_seconds'] = round(lyricist_duration, 2)
             print(f"⏱️  Lyricist completed in {lyricist_duration:.2f}s")
 
+            # Log Lyricist output
+            print("\n=== LYRICIST OUTPUT (Beat-by-Beat Lyrics) ===")
+            print(json.dumps(session.lyricist_output.model_dump(), indent=2))
+            print("=============================================\n")
+
             # Build grid (Python - instant)
             grid_builder_start = time.time()
             session.grid_builder_output = build_grid_from_lyrics(
@@ -196,9 +206,18 @@ class PipelineService:
             session.timing['grid_builder_seconds'] = round(grid_builder_duration, 4)
             print(f"⏱️  Grid Builder completed in {grid_builder_duration:.4f}s")
 
+            # Log Grid Builder output
+            print("\n=== GRID BUILDER OUTPUT (Performance Grid) ===")
+            print(json.dumps(session.grid_builder_output.model_dump(), indent=2))
+            print("===============================================\n")
+
             # Step 3: Generate audio
             session.step = PipelineStep.GENERATING_AUDIO
             audio_start = time.time()
+
+            print("=== FINAL TTS PROMPT ===")
+            print(session.grid_builder_output.tts_prompt)
+            print("========================\n")
 
             # Ensure output directory exists
             output_dir = Path(__file__).parent.parent / "static" / "generated"

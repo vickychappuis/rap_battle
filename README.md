@@ -1,13 +1,13 @@
 # Rap Battle Multi-Agent System
 
-A minimal proof-of-concept (PoC) multi-agent system using LangChain + OpenAI API for generating timed rap a cappella responses.
+A minimal proof-of-concept (PoC) system using LangChain + OpenAI API for generating timed rap a cappella responses.
 
 ## Overview
 
-This system uses two AI agents to generate battle rap responses that fit precise timing constraints:
+This system generates battle rap responses that fit precise timing constraints:
 
-1. **Agent 1 (Lyricist)**: Generates original rap lyrics with exact word counts to match BPM and time constraints
-2. **Agent 2 (Grid + TTS Builder)**: Creates a beat-by-beat performance grid and TTS-ready prompt
+1. **Lyricist Agent (LLM)**: Generates original rap lyrics with exact word counts to match BPM and time constraints
+2. **Grid Builder (Python)**: Creates a beat-by-beat performance grid and TTS-ready prompt using deterministic logic
 
 ## Installation
 
@@ -88,7 +88,7 @@ The orchestrator computes:
 - Each full bar: 8 words (4 beats × 2 words/beat)
 - Tail: 5 words (3 beats: 2+2+1 held)
 
-### 2. Agent 1: Lyricist
+### 2. Lyricist Agent (LLM)
 
 Generates structured lyrics:
 ```json
@@ -111,9 +111,9 @@ Generates structured lyrics:
 - Tail must match calculated word count
 - Final held word must be a single word
 
-### 3. Agent 2: Grid + TTS Builder
+### 3. Grid Builder (Python Function)
 
-Creates performance grid and TTS prompt:
+Creates performance grid and TTS prompt using deterministic logic:
 ```json
 {
   "ms_per_beat": 666.67,
@@ -144,10 +144,10 @@ Per full bar words: 8
 Tail words: 5
 ===========================
 
-📝 Agent 1 (Lyricist): Generating lyrics...
-✓ Agent 1 complete
+📝 Lyricist: Generating lyrics...
+✓ Lyricist complete
 
-=== AGENT 1 OUTPUT (Lyrics) ===
+=== LYRICIST OUTPUT (Lyrics) ===
 {
   "grid_beats": 15,
   "full_bars": 3,
@@ -161,11 +161,11 @@ Tail words: 5
   "final_held_word": "go"
 }
 
-🔍 Validating Agent 1 output...
+🔍 Validating Lyricist output...
 ✓ Validation passed: 3 bars, 5 tail words
 
-🎵 Agent 2 (Grid + TTS Builder): Building performance grid...
-✓ Agent 2 complete
+🎵 Grid Builder: Building performance grid...
+✓ Grid Builder complete
 
 === FINAL TTS PROMPT ===
 Original male rap acapella ONLY. 90 BPM, 4/4. Length: 10.0s (exact), deliver as one clean take.
@@ -188,11 +188,12 @@ Step back watch me dismantle your weak flow My bars hit harder yours move way to
 ### File Structure
 ```
 rap_battle/
-├── main.py                      # Main orchestrator and agent implementations
+├── main.py                      # Main orchestrator
+├── grid_builder_python.py       # Grid Builder implementation (pure Python)
+├── models.py                    # Pydantic models for outputs
 ├── prompts/
 │   ├── __init__.py              # Prompts package initialization
-│   ├── lyricist_prompt.py       # Lyricist prompt template
-│   └── grid_builder_prompt.py   # Grid Builder prompt template
+│   └── lyricist_prompt.py       # Lyricist prompt template
 ├── tests/
 │   ├── __init__.py
 │   └── test_timing.py           # Timing calculation tests (no API key required)
@@ -208,7 +209,7 @@ rap_battle/
 
 ### Key Components
 
-1. **Pydantic Models**: Type-safe schemas for agent outputs
+1. **Pydantic Models**: Type-safe schemas for outputs
    - `LyricistOutput`: Lyrics structure
    - `GridBuilderOutput`: Performance grid structure
    - `PerformanceBeat`: Single beat in grid
@@ -217,15 +218,17 @@ rap_battle/
    - `count_words()`: Word counting
    - `validate_lyricist_output()`: Verify bars and tail
 
-3. **Agent Prompts** (one file per agent): Detailed instructions for each agent
+3. **Lyricist Prompt**: Detailed instructions for the LLM agent
    - `prompts/lyricist_prompt.py`: Lyricist instructions and metadata
-   - `prompts/grid_builder_prompt.py`: Grid Builder instructions and metadata
-   - Each file contains template and metadata for easy modification
 
-4. **Orchestrator**: `RapBattleOrchestrator` class
+4. **Grid Builder**: Pure Python implementation
+   - `grid_builder_python.py`: Deterministic beat-by-beat grid construction
+   - No LLM calls - instant execution
+
+5. **Orchestrator**: `RapBattleOrchestrator` class
    - Loads environment variables
    - Computes timing constraints
-   - Executes agents in sequence
+   - Executes Lyricist agent and Grid Builder
    - Validates outputs
    - Displays results
 
@@ -261,8 +264,8 @@ export TIME_SIGNATURE="3/4"  # Waltz time (would require code changes)
 
 ## Design Decisions
 
-1. **Deterministic Grid Building**: Agent 2 uses temperature=0 for consistent output
-2. **Creative Lyrics**: Agent 1 uses temperature=0.7 for variation
+1. **Python Grid Building**: Grid Builder replaced with pure Python for instant, deterministic execution (no LLM needed)
+2. **Creative Lyrics**: Lyricist uses temperature=0.7 for variation
 3. **JSON Output**: Structured data for easy parsing and validation
 4. **Pydantic Validation**: Type safety and automatic validation
 5. **Clean Mode**: Default to TTS-friendly content
@@ -286,11 +289,11 @@ Set your API key:
 export OPENAI_API_KEY="sk-your-key-here"
 ```
 
-### "Expected X words in tail, got Y"
-The AI didn't follow word count constraints. This is rare but can happen. Try:
+### "Expected X beats, got Y"
+The Lyricist didn't follow beat count constraints. This is rare but can happen. The system will automatically pad or truncate within a small tolerance. If the difference is too large, try:
 1. Running again (may work due to temperature)
 2. Adjusting BPM or seconds for cleaner math
-3. Using GPT-4 instead of GPT-4o-mini (more reliable)
+3. Using a more capable model (e.g., gpt-4)
 
 ### API Rate Limits
 If you hit rate limits, add delays or use a different model tier.

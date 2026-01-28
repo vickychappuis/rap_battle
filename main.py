@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Minimal PoC: Multi-Agent Rap Battle Response System
+Minimal PoC: Rap Battle Response System
 Using LangChain + OpenAI API
 
-Two agents:
-1. Lyricist: Generates timed battle-style response lyrics
-2. Grid Builder: Creates performance grid and TTS prompt
+Components:
+1. Lyricist (LLM): Generates timed battle-style response lyrics
+2. Grid Builder (Python): Creates performance grid and TTS prompt
 
 Base track plays continuously throughout the battle. AI response is mixed
 over the beat at the next bar boundary.
@@ -472,7 +472,7 @@ Per full bar words: 8
 Tail words: 5
 ===========================
 
-=== AGENT 1 OUTPUT (Lyrics) ===
+=== LYRICIST OUTPUT (Lyrics) ===
 {
   "grid_beats": 15,
   "full_bars": 3,
@@ -487,7 +487,7 @@ Tail words: 5
 }
 ================================
 
-=== AGENT 2 OUTPUT (Performance Grid) ===
+=== GRID BUILDER OUTPUT (Performance Grid) ===
 {
   "ms_per_beat": 666.67,
   "performance_grid": [
