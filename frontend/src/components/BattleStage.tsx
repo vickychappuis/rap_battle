@@ -3,6 +3,7 @@
  */
 
 import { useSession } from '../hooks/useSession';
+import { FlyerHeader } from './FlyerHeader';
 import { StatusBanner } from './StatusBanner';
 import { RecordButton } from './RecordButton';
 import { PipelineProgress } from './PipelineProgress';
@@ -27,11 +28,9 @@ export function BattleStage() {
   const turnsPerPlayer = sessionData?.turns_per_player ?? 2;
 
   return (
-    <div className="container xerox-grain paper-texture">
-      <header className="text-center mb-4">
-        <h1>Rap Battle</h1>
-        <p className="text-gray">AI vs Human</p>
-      </header>
+    <div className="page-wrapper xerox-grain paper-texture">
+      <FlyerHeader />
+      <div className="container">
 
       <StatusBanner
         state={state}
@@ -51,7 +50,7 @@ export function BattleStage() {
         </div>
       )}
 
-      <div className="mt-2">
+      <div className="mt-3">
         <RecordButton
           state={state}
           hasSession={!!sessionData}
@@ -70,7 +69,7 @@ export function BattleStage() {
         </div>
       )}
 
-      <div className="mt-4">
+      <div className="mt-3">
         <PipelineProgress status={status} />
       </div>
 
@@ -82,13 +81,14 @@ export function BattleStage() {
       )}
 
       {state === 'complete' && (
-        <div className="mt-4 text-center">
+        <div className="mt-4 text-center animate-in">
           <p className="text-lg">Battle Complete!</p>
           <p className="text-sm text-gray mt-1">
             {turnsPerPlayer} rounds fought. Click "New Battle" to go again
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 }

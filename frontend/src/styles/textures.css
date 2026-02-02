@@ -22,11 +22,31 @@
 
 /* Paper texture */
 .paper-texture {
-  background-color: var(--paper-cream);
-  background-image:
-    linear-gradient(90deg, transparent 79px, rgba(0,0,0,0.03) 79px, rgba(0,0,0,0.03) 81px, transparent 81px),
-    linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px);
-  background-size: 100px 30px;
+  background-color: var(--poster-yellow);
+  background-image: url('/background-light.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-attachment: fixed;
+  position: relative;
+}
+
+/* White overlay for improved readability on textured backgrounds */
+.paper-texture::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.paper-texture > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Stamp/stamp effect for status badges */
@@ -34,12 +54,15 @@
   display: inline-block;
   padding: 0.25rem 0.75rem;
   border: 2px solid currentColor;
-  border-radius: 2px;
+  border-radius: 3px;
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   transform: rotate(-2deg);
+  box-shadow: var(--shadow-sm);
+  mix-blend-mode: multiply;
 }
 
 /* Progress bar */
@@ -78,9 +101,14 @@
   justify-content: center;
   font-family: var(--font-headline);
   font-size: 3rem;
+  margin: 0 auto;
+  box-shadow: var(--shadow-md);
+  background: var(--poster-yellow);
+  mix-blend-mode: multiply;
 }
 
 .countdown-circle.recording {
-  border-color: var(--marker-red);
-  color: var(--marker-red);
+  border-color: var(--spray-paint-red);
+  color: var(--spray-paint-red);
+  box-shadow: 0 0 0 4px rgba(230, 28, 76, 0.15), var(--shadow-md);
 }

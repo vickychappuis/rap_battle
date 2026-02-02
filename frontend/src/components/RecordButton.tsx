@@ -75,13 +75,19 @@ export function RecordButton({
   // Show secondary "Start Over" button when retry/try again is available
   const showStartOverSecondary = isError && retryCount < 2;
 
+  const primaryClasses = [
+    'btn-primary',
+    'animate-in',
+    state === 'recording' ? 'recording' : '',
+  ].filter(Boolean).join(' ');
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+    <div className="flex flex-col gap-2">
       <button
         onClick={handleClick}
         disabled={isDisabled}
-        className={state === 'recording' ? 'recording' : ''}
-        style={{ width: '100%', padding: '1rem 2rem', fontSize: '1.5rem' }}
+        className={primaryClasses}
+        style={{ width: '100%' }}
       >
         {getLabel()}
       </button>
@@ -89,12 +95,8 @@ export function RecordButton({
       {showStartOverSecondary && (
         <button
           onClick={onStartOver}
-          style={{
-            width: '100%',
-            padding: '0.5rem 1rem',
-            fontSize: '1rem',
-            opacity: 0.7,
-          }}
+          className="btn-secondary animate-in animate-in--delay-1"
+          style={{ width: '100%' }}
         >
           Start Over
         </button>
