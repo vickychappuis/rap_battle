@@ -8,6 +8,7 @@ import { StatusBanner } from './StatusBanner';
 import { RecordButton } from './RecordButton';
 import { PipelineProgress } from './PipelineProgress';
 import { BattleTimeline } from './BattleTimeline';
+import { PlayerCard } from './PlayerCard';
 
 export function BattleStage() {
   const {
@@ -31,6 +32,7 @@ export function BattleStage() {
     <div className="page-wrapper xerox-grain paper-texture">
       <FlyerHeader />
       <div className="container">
+        <PlayerCard />
 
       <StatusBanner
         state={state}

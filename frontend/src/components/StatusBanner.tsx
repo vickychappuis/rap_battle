@@ -27,10 +27,12 @@ export function StatusBanner({
   currentRound,
   turnsPerPlayer,
 }: StatusBannerProps) {
+  if (state === 'idle') return null;
+
   const label = STATE_LABELS[state];
   const isRecording = state === 'recording';
   const isError = state === 'error';
-  const showTurnIndicator = state !== 'idle' && state !== 'complete';
+  const showTurnIndicator = state !== 'complete';
 
   return (
     <div className="card text-center">

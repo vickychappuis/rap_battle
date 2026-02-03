@@ -47,7 +47,7 @@ export function BattleTimeline({ turnHistory }: BattleTimelineProps) {
             key={`${turn.player}-${turn.turn_number}`}
             className="card"
             style={{
-              borderLeft: isUser ? '4px solid var(--ink-black)' : '4px solid var(--stamp-red)',
+              borderLeft: isUser ? '4px solid var(--ink-black)' : '4px solid var(--spray-paint-red)',
               marginLeft: isUser ? '0' : '1rem',
               marginRight: isUser ? '1rem' : '0',
             }}

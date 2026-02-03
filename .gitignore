@@ -33,3 +33,5 @@ Thumbs.db
 *_results.json
 *_comparison*.json
 test_output/
+
+.gemini-clipboard/
