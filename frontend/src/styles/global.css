@@ -318,8 +318,8 @@ button:disabled:hover {
   align-items: center;
   gap: 32px;
   width: 100%;
-  padding: 28px 0;
-  margin-bottom: var(--space-sm);
+  padding: 18px 0;
+  margin-bottom: var(--space-xs);
 }
 
 .player-card__avatar {
@@ -474,7 +474,7 @@ button:disabled:hover {
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
   gap: var(--space-sm);
-  margin-top: var(--space-md);
+  margin-top: var(--space-sm);
   margin-bottom: var(--space-md);
   min-height: 300px;
 }
@@ -501,6 +501,29 @@ button:disabled:hover {
   min-height: 0;
   max-width: 80%;
   object-fit: contain;
+}
+
+@keyframes mic-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-8px) rotate(-2deg);
+  }
+  66% {
+    transform: translateY(-4px) rotate(2deg);
+  }
+}
+
+.recording-grid__mic-img--cta {
+  animation: mic-bob 2.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recording-grid__mic-img--cta {
+    animation: none;
+  }
 }
 
 .recording-grid__mic-label {

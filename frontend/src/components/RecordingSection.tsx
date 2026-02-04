@@ -1,9 +1,15 @@
 import { useSession } from '../hooks/useSession';
 
 export function RecordingSection() {
-  const { startRecording, state, countdown, sessionData, turnHistory, currentRound } = useSession();
+  const { startBattle, startRecording, state, countdown, sessionData, turnHistory } = useSession();
 
   const isRecording = state === 'recording';
+  const hasSession = sessionData !== null;
+
+  // Calculate bars from BPM and record duration
+  const bpm = sessionData?.bpm ?? 0;
+  const recordDuration = sessionData?.record_duration ?? 0;
+  const calculatedBars = bpm > 0 ? Math.round((bpm * recordDuration) / 240) : 0;
 
   // Get the last AI response from turn history
   const lastAiTurn = [...turnHistory].reverse().find((turn) => turn.player === 'ai');
@@ -23,15 +29,15 @@ export function RecordingSection() {
       {/* Left: Mic area (square, clickable) */}
       <div
         className="recording-grid__mic"
-        onClick={!isRecording ? startRecording : undefined}
+        onClick={!isRecording ? (hasSession ? startRecording : startBattle) : undefined}
         style={{
           cursor: isRecording ? 'default' : 'pointer',
           backgroundColor: isRecording ? 'rgba(230, 28, 76, 0.1)' : 'transparent',
         }}
       >
-        <img src="/mic.png" alt="Microphone" className="recording-grid__mic-img" />
+        <img src="/mic.png" alt="Microphone" className={`recording-grid__mic-img${hasSession && !isRecording ? ' recording-grid__mic-img--cta' : ''}`} />
         <p className="recording-grid__mic-label">
-          {isRecording ? 'Recording...' : 'Start Recording'}
+          {isRecording ? 'Recording...' : hasSession ? 'Start Recording' : 'Start Battle'}
         </p>
       </div>
 
@@ -42,17 +48,19 @@ export function RecordingSection() {
             <span className="recording-grid__countdown">{countdown}</span>
             <span className="recording-grid__countdown-label">seconds left</span>
           </>
-        ) : (
+        ) : hasSession ? (
           <>
             <div className="recording-grid__stat">
-              <span className="recording-grid__stat-value">{sessionData?.bpm ?? '--'}</span>
+              <span className="recording-grid__stat-value">{bpm}</span>
               <span className="recording-grid__stat-label">BPM</span>
             </div>
             <div className="recording-grid__stat">
-              <span className="recording-grid__stat-value">{sessionData?.bars_per_turn ?? '--'}</span>
+              <span className="recording-grid__stat-value">{calculatedBars}</span>
               <span className="recording-grid__stat-label">Bars</span>
             </div>
           </>
+        ) : (
+          <p className="recording-grid__taunt">Click to drop the beat</p>
         )}
       </div>
 
@@ -63,8 +71,10 @@ export function RecordingSection() {
             <span className="recording-grid__response-label">Opponent's last verse:</span>
             <p className="recording-grid__response-text">{opponentLyrics}</p>
           </>
-        ) : (
+        ) : hasSession ? (
           <p className="recording-grid__taunt">{randomTaunt}</p>
+        ) : (
+          <p className="recording-grid__taunt">Your opponent awaits...</p>
         )}
       </div>
     </div>
