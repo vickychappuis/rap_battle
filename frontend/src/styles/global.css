@@ -318,12 +318,12 @@ button:disabled:hover {
   align-items: center;
   gap: 32px;
   width: 100%;
-  padding: 18px 0;
+  padding: 10px 0;
   margin-bottom: var(--space-xs);
 }
 
 .player-card__avatar {
-  width: 200px;
+  width: 150px;
   height: auto;
   object-fit: contain;
   flex-shrink: 0;
@@ -475,8 +475,8 @@ button:disabled:hover {
   grid-template-rows: 1fr 1fr;
   gap: var(--space-sm);
   margin-top: var(--space-sm);
-  margin-bottom: var(--space-md);
-  min-height: 300px;
+  margin-bottom: var(--space-xs);
+  min-height: 240px;
 }
 
 .recording-grid__mic {
@@ -488,7 +488,7 @@ button:disabled:hover {
   justify-content: center;
   border: 3px solid var(--ink-black);
   border-radius: 4px;
-  padding: var(--space-md);
+  padding: var(--space-sm);
   transition: background-color var(--transition-normal);
 }
 
@@ -544,7 +544,7 @@ button:disabled:hover {
   gap: var(--space-lg);
   border: 3px solid var(--ink-black);
   border-radius: 4px;
-  padding: var(--space-md);
+  padding: var(--space-sm);
 }
 
 .recording-grid__countdown {
@@ -571,7 +571,7 @@ button:disabled:hover {
 
 .recording-grid__stat-value {
   font-family: var(--font-headline);
-  font-size: 3rem;
+  font-size: 2.5rem;
   color: var(--ink-black);
   line-height: 1;
 }
@@ -593,7 +593,7 @@ button:disabled:hover {
   justify-content: center;
   border: 3px solid var(--ink-black);
   border-radius: 4px;
-  padding: var(--space-md);
+  padding: var(--space-sm);
   overflow-y: auto;
 }
 
