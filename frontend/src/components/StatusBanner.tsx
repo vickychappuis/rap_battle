@@ -37,30 +37,30 @@ export function StatusBanner({
   return (
     <div className="card text-center">
       <span
-        className={`stamp ${isRecording ? 'recording text-red' : ''} ${isError ? 'text-red' : ''}`}
+        className={`stamp ${isRecording ? 'recording text-spray-paint-red' : ''} ${isError ? 'text-spray-paint-red' : ''}`}
       >
         {label}
       </span>
 
       {showTurnIndicator && (
-        <div className="turn-indicator mt-2" style={{ fontSize: '0.9rem' }}>
-          <span className="text-gray">
+        <div className="turn-indicator mt-4 text-sm">
+          <span className="text-xerox-gray">
             Round {currentRound} of {turnsPerPlayer}
           </span>
           {state === 'awaiting_user' && (
-            <span style={{ marginLeft: '0.5rem' }}>- Your Turn</span>
+            <span className="ml-2">- Your Turn</span>
           )}
           {state === 'processing' && (
-            <span style={{ marginLeft: '0.5rem' }}>- AI Thinking...</span>
+            <span className="ml-2">- AI Thinking...</span>
           )}
           {state === 'playing_response' && (
-            <span style={{ marginLeft: '0.5rem' }}>- AI's Turn</span>
+            <span className="ml-2">- AI's Turn</span>
           )}
         </div>
       )}
 
       {isRecording && countdown > 0 && (
-        <div className="mt-2">
+        <div className="mt-4">
           <div className="countdown-circle recording">{countdown}</div>
         </div>
       )}

@@ -22,26 +22,11 @@
 
 /* Paper texture */
 .paper-texture {
-  background-color: var(--poster-yellow);
   background-image: url('/background-light.png');
   background-size: cover;
   background-repeat: no-repeat;
-  background-position: center;
-  background-attachment: fixed;
+  background-position: center top;
   position: relative;
-}
-
-/* White overlay for improved readability on textured backgrounds */
-.paper-texture::after {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.15);
-  pointer-events: none;
-  z-index: 0;
 }
 
 .paper-texture > * {
@@ -68,14 +53,14 @@
 /* Progress bar */
 .progress-bar {
   height: 8px;
-  background: var(--xerox-gray);
-  border: 2px solid var(--ink-black);
+  background: var(--color-xerox-gray);
+  border: 2px solid var(--color-ink-black);
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: var(--ink-black);
+  background: var(--color-ink-black);
   transition: width 0.3s ease;
 }
 
@@ -94,7 +79,7 @@
 .countdown-circle {
   width: 120px;
   height: 120px;
-  border: 4px solid var(--ink-black);
+  border: 4px solid var(--color-ink-black);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -103,12 +88,12 @@
   font-size: 3rem;
   margin: 0 auto;
   box-shadow: var(--shadow-md);
-  background: var(--poster-yellow);
+  background: var(--color-poster-yellow);
   mix-blend-mode: multiply;
 }
 
 .countdown-circle.recording {
-  border-color: var(--spray-paint-red);
-  color: var(--spray-paint-red);
+  border-color: var(--color-spray-paint-red);
+  color: var(--color-spray-paint-red);
   box-shadow: 0 0 0 4px rgba(230, 28, 76, 0.15), var(--shadow-md);
 }

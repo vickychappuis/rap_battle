@@ -82,12 +82,11 @@ export function RecordButton({
   ].filter(Boolean).join(' ');
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-4">
       <button
         onClick={handleClick}
         disabled={isDisabled}
-        className={primaryClasses}
-        style={{ width: '100%' }}
+        className={`${primaryClasses} w-full`}
       >
         {getLabel()}
       </button>
@@ -95,8 +94,7 @@ export function RecordButton({
       {showStartOverSecondary && (
         <button
           onClick={onStartOver}
-          className="btn-secondary animate-in animate-in--delay-1"
-          style={{ width: '100%' }}
+          className="btn-secondary animate-in animate-in--delay-1 w-full"
         >
           Start Over
         </button>

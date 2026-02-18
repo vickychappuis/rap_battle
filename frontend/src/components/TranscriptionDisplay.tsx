@@ -13,7 +13,7 @@ export function TranscriptionDisplay({ transcription }: TranscriptionDisplayProp
 
   return (
     <div className="card">
-      <h2 className="mb-1">Your Bars</h2>
+      <h2 className="mb-2">Your Bars</h2>
       <p className="mono" style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>
         "{transcription}"
       </p>

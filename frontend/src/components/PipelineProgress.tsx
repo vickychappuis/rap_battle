@@ -37,8 +37,8 @@ export function PipelineProgress({ status }: PipelineProgressProps) {
 
   return (
     <div className="card">
-      <h2 className="mb-2">Pipeline Progress</h2>
-      <div className="flex flex-col gap-1">
+      <h2 className="mb-4">Pipeline Progress</h2>
+      <div className="flex flex-col gap-2">
         {STEPS.map((step, index) => {
           const isActive = index === currentIndex;
           const isComplete = index < currentIndex;
@@ -47,7 +47,7 @@ export function PipelineProgress({ status }: PipelineProgressProps) {
           return (
             <div
               key={step.key}
-              className={`flex items-center gap-1 ${isActive ? 'recording' : ''}`}
+              className={`flex items-center gap-2 ${isActive ? 'recording' : ''}`}
               style={{ opacity: isPending ? 0.4 : 1 }}
             >
               <span className="mono text-sm" style={{ width: '1.5rem' }}>
@@ -59,7 +59,7 @@ export function PipelineProgress({ status }: PipelineProgressProps) {
         })}
       </div>
       {currentIndex >= 0 && currentIndex < STEPS.length - 1 && (
-        <div className="progress-bar mt-2">
+        <div className="progress-bar mt-4">
           <div
             className="progress-bar-fill"
             style={{ width: `${((currentIndex + 1) / STEPS.length) * 100}%` }}

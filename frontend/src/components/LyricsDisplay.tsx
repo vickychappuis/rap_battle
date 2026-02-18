@@ -13,7 +13,7 @@ export function LyricsDisplay({ lyrics }: LyricsDisplayProps) {
 
   return (
     <div className="card">
-      <h2 className="mb-1">AI Response</h2>
+      <h2 className="mb-2">AI Response</h2>
       <p style={{ fontSize: '1.1rem', lineHeight: 1.6, fontStyle: 'italic' }}>
         "{lyrics}"
       </p>
