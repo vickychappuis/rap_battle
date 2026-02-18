@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { FlyerHeader } from "./FlyerHeader";
 
 export function AccessPage() {
   const navigate = useNavigate();
@@ -19,13 +20,7 @@ export function AccessPage() {
 
   return (
     <div className="access-page">
-      <div className="flyer-header">
-        <img
-          src="/rap_arena_logo.png"
-          alt="Rap Arena"
-          className="flyer-logo"
-        />
-      </div>
+      <FlyerHeader />
 
       <main className="access-content">
         <form className="access-form" onSubmit={handleSubmit}>

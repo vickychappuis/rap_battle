@@ -3,19 +3,14 @@
  */
 
 import { useNavigate } from "react-router-dom";
+import { FlyerHeader } from "./FlyerHeader";
 
 export function LandingPage() {
   const navigate = useNavigate();
 
   return (
     <div className="landing-page">
-      <div className="flyer-header">
-        <img
-          src="/rap_arena_logo.png"
-          alt="Rap Arena"
-          className="flyer-logo"
-        />
-      </div>
+      <FlyerHeader />
 
       <main className="landing-content">
         <div className="landing-gloves">
