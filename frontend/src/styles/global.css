@@ -36,6 +36,11 @@ html {
 body {
   font-family: var(--font-body);
   background-color: var(--color-paper-white);
+  background-image: url('/background-light.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-attachment: fixed;
   color: var(--color-ink-black);
   min-height: 100vh;
   line-height: 1.5;

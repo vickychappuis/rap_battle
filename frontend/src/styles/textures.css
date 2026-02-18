@@ -22,10 +22,6 @@
 
 /* Paper texture */
 .paper-texture {
-  background-image: url('/background-light.png');
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-position: center top;
   position: relative;
 }
 
