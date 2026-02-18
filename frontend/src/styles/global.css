@@ -573,7 +573,7 @@ button:disabled:hover {
     transform: var(--glove-base) translateY(0);
   }
   50% {
-    transform: var(--glove-base) translateY(-12px);
+    transform: var(--glove-base) translateY(-130px);
   }
 }
 
