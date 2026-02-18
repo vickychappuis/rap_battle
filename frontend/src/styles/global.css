@@ -554,17 +554,17 @@ button:disabled:hover {
 }
 
 .landing-glove--red {
-  --glove-base: translate(-50%, -50%) translate(-85%, 30%) rotate(70deg);
+  --glove-base: translate(-50%, -50%) translate(-105%, 30%) rotate(70deg);
   left: 50%;
   top: 50%;
   animation: glove-float 3s ease-in-out infinite;
 }
 
 .landing-glove--blue {
-  --glove-base: translate(-50%, -50%) translate(85%, -30%) rotate(240deg);
+  --glove-base: translate(-50%, -50%) translate(105%, -30%) rotate(240deg);
   left: 50%;
   top: 50%;
-  animation: glove-float 3s ease-in-out infinite 1.5s;
+  animation: glove-float 3s ease-in-out infinite;
 }
 
 @keyframes glove-float {
