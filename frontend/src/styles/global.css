@@ -36,7 +36,7 @@ html {
 body {
   font-family: var(--font-body);
   background-color: var(--color-paper-white);
-  background-image: url('/background-light.png');
+  background-image: url("/background-light.png");
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center top;
@@ -538,42 +538,50 @@ button:disabled:hover {
 }
 
 .landing-gloves {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(2rem, 8vw, 6rem);
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  height: clamp(200px, 32vw, 280px);
   margin-bottom: 3rem;
 }
 
 .landing-glove {
-  width: clamp(120px, 20vw, 240px);
+  position: absolute;
+  width: clamp(144px, 24vw, 288px);
   height: auto;
   object-fit: contain;
   filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.3));
 }
 
 .landing-glove--red {
-  transform: rotate(-12deg);
+  --glove-base: translate(-50%, -50%) translate(-85%, 30%) rotate(70deg);
+  left: 50%;
+  top: 50%;
   animation: glove-float 3s ease-in-out infinite;
 }
 
 .landing-glove--blue {
-  transform: rotate(12deg);
+  --glove-base: translate(-50%, -50%) translate(85%, -30%) rotate(240deg);
+  left: 50%;
+  top: 50%;
   animation: glove-float 3s ease-in-out infinite 1.5s;
 }
 
 @keyframes glove-float {
-  0%, 100% { transform: rotate(var(--r, -12deg)) translateY(0); }
-  50% { transform: rotate(var(--r, -12deg)) translateY(-12px); }
+  0%,
+  100% {
+    transform: var(--glove-base) translateY(0);
+  }
+  50% {
+    transform: var(--glove-base) translateY(-12px);
+  }
 }
-
-.landing-glove--red { --r: -12deg; }
-.landing-glove--blue { --r: 12deg; }
 
 @media (prefers-reduced-motion: reduce) {
   .landing-glove--red,
   .landing-glove--blue {
     animation: none;
+    transform: var(--glove-base);
   }
 }
 
@@ -665,7 +673,9 @@ button:disabled:hover {
   background: var(--color-paper-white);
   color: var(--color-ink-black);
   outline: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .access-input:focus {
