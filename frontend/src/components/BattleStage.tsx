@@ -48,13 +48,13 @@ export function BattleStage() {
           <RecordingSection />
 
           {sessionData && (
-            <div className="mt-4 text-center text-sm text-xerox-gray mono">
+            <div className="mt-2 text-center text-sm text-xerox-gray mono">
               {sessionData.bpm} BPM | {sessionData.bars_per_turn} bars |{" "}
               {sessionData.record_duration}s per turn
             </div>
           )}
 
-          <div className="mt-6">
+          <div className="mt-3">
             <PipelineProgress status={status} />
           </div>
 

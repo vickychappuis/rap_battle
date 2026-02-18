@@ -39,6 +39,10 @@ export function AccessPage() {
             />
           </div>
 
+          <p className="access-divider" aria-hidden="true">
+            or
+          </p>
+
           <div className="access-field">
             <label className="access-label" htmlFor="invite-code">
               Insert your invite code here
