@@ -390,7 +390,7 @@ button:disabled:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow-y: auto;
+  overflow: hidden;
   min-height: 0;
 }
 
@@ -457,19 +457,20 @@ button:disabled:hover {
 /* Response text */
 .battle-grid__response-label {
   font-family: var(--font-body);
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--color-xerox-gray);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  margin-bottom: 7px;
+  margin-bottom: 4px;
 }
 
 .battle-grid__response-text {
   font-family: var(--font-mono);
-  font-size: 0.95rem;
+  font-size: 0.7rem;
   color: var(--color-ink-black);
-  line-height: 1.6;
+  line-height: 1.4;
   white-space: pre-wrap;
+  overflow-y: auto;
 }
 
 /* Pipeline stepper */
@@ -776,22 +777,19 @@ button:disabled:hover {
   color: var(--color-xerox-gray);
 }
 
-.access-divider {
-  margin: -0.4rem 0;
-  align-self: center;
-  font-family: var(--font-headline);
-  font-size: 1.45rem;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--color-ink-black);
-  opacity: 0.75;
-}
-
 .access-submit {
   margin-top: 0.75rem;
   align-self: stretch;
   font-size: 1.75rem;
   padding: 1.2rem 2rem;
+}
+
+.access-error {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--color-spray-paint-red);
+  text-align: center;
+  margin: -0.5rem 0;
 }
 
 /* ===== 404 Page ===== */

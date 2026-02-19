@@ -1,21 +1,37 @@
 /**
- * AccessPage - Collects ElevenLabs API key and invite code before entering the battle.
+ * AccessPage - Collects invite code before entering the battle.
  */
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FlyerHeader } from "./FlyerHeader";
+import { validateInviteCode } from "../api/session";
 
 export function AccessPage() {
   const navigate = useNavigate();
-  const [apiKey, setApiKey] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    localStorage.setItem("elevenlabs_api_key", apiKey);
-    localStorage.setItem("invite_code", inviteCode);
-    navigate("/battle");
+    setError("");
+
+    if (!inviteCode) {
+      setError("Please enter an invite code.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await validateInviteCode(inviteCode);
+      localStorage.setItem("invite_code", inviteCode);
+      navigate("/battle");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Validation failed");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -24,25 +40,6 @@ export function AccessPage() {
 
       <main className="access-content">
         <form className="access-form" onSubmit={handleSubmit}>
-          <div className="access-field">
-            <label className="access-label" htmlFor="api-key">
-              Put your ElevenLabs API code
-            </label>
-            <input
-              id="api-key"
-              className="access-input"
-              type="text"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-..."
-              autoComplete="off"
-            />
-          </div>
-
-          <p className="access-divider" aria-hidden="true">
-            or
-          </p>
-
           <div className="access-field">
             <label className="access-label" htmlFor="invite-code">
               Insert your invite code here
@@ -55,11 +52,18 @@ export function AccessPage() {
               onChange={(e) => setInviteCode(e.target.value)}
               placeholder="XXXX-XXXX"
               autoComplete="off"
+              disabled={loading}
             />
           </div>
 
-          <button type="submit" className="btn-primary access-submit">
-            Let's Go
+          {error && <p className="access-error">{error}</p>}
+
+          <button
+            type="submit"
+            className="btn-primary access-submit"
+            disabled={loading}
+          >
+            {loading ? "Validating..." : "Let's Go"}
           </button>
         </form>
       </main>

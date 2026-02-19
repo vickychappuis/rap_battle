@@ -5,8 +5,10 @@ import uuid
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Header
+from typing import Optional
 
+from api.routes.access import is_valid_invite_code
 from api.models.session import (
     SessionResponse,
     SessionStatus,
@@ -28,12 +30,15 @@ TURNS_PER_PLAYER = int(os.environ.get("TURNS_PER_PLAYER", 2))
 
 
 @router.post("", response_model=SessionResponse)
-async def create_session():
+async def create_session(x_invite_code: Optional[str] = Header(None)):
     """
-    Create a new battle session.
+    Create a new battle session. Requires a valid invite code.
 
     Returns session config including BPM, bars per turn, and base track URL.
     """
+    if not x_invite_code or not is_valid_invite_code(x_invite_code):
+        raise HTTPException(status_code=401, detail="Invalid invite code")
+
     session_id = str(uuid.uuid4())
 
     # Calculate record duration from bars and BPM

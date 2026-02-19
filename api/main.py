@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from api.routes import session_router
+from api.routes import session_router, access_router
 
 # Create FastAPI app
 app = FastAPI(
@@ -38,6 +38,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(access_router)
 app.include_router(session_router)
 
 # Static files setup

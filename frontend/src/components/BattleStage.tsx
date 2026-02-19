@@ -2,11 +2,21 @@
  * BattleStage - Main container component for the multi-turn rap battle UI.
  */
 
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSession } from "../hooks/useSession";
 import { FlyerHeader } from "./FlyerHeader";
 import { RecordingSection } from "./RecordingSection";
+import { getInviteCode } from "../api/session";
 
 export function BattleStage() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!getInviteCode()) {
+      navigate("/access", { replace: true });
+    }
+  }, [navigate]);
   const {
     state,
     sessionData,
