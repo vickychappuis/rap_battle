@@ -36,36 +36,28 @@ export function PipelineProgress({ status }: PipelineProgressProps) {
   }
 
   return (
-    <div className="card">
-      <h2 className="mb-4">Pipeline Progress</h2>
-      <div className="flex flex-col gap-2">
-        {STEPS.map((step, index) => {
-          const isActive = index === currentIndex;
-          const isComplete = index < currentIndex;
-          const isPending = index > currentIndex;
+    <div className="pipeline">
+      {STEPS.map((step, index) => {
+        const isActive = index === currentIndex;
+        const isComplete = index < currentIndex;
+        const isPending = index > currentIndex;
+        const isLast = index === STEPS.length - 1;
 
-          return (
-            <div
-              key={step.key}
-              className={`flex items-center gap-2 ${isActive ? 'recording' : ''}`}
-              style={{ opacity: isPending ? 0.4 : 1 }}
-            >
-              <span className="mono text-sm" style={{ width: '1.5rem' }}>
-                {isComplete ? '[x]' : isActive ? '[>]' : '[ ]'}
-              </span>
-              <span>{step.label}</span>
-            </div>
-          );
-        })}
-      </div>
-      {currentIndex >= 0 && currentIndex < STEPS.length - 1 && (
-        <div className="progress-bar mt-4">
+        return (
           <div
-            className="progress-bar-fill"
-            style={{ width: `${((currentIndex + 1) / STEPS.length) * 100}%` }}
-          />
-        </div>
-      )}
+            key={step.key}
+            className={`pipeline__step ${isActive ? 'pipeline__step--active' : ''} ${isComplete ? 'pipeline__step--complete' : ''} ${isPending ? 'pipeline__step--pending' : ''}`}
+          >
+            <div className="pipeline__indicator">
+              <div className="pipeline__dot">
+                {isComplete ? '\u2713' : isActive ? '\u25B6' : ''}
+              </div>
+              {!isLast && <div className={`pipeline__line ${isComplete ? 'pipeline__line--filled' : ''}`} />}
+            </div>
+            <span className="pipeline__label">{step.label}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

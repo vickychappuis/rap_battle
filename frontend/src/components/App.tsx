@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LandingPage } from "./LandingPage";
 import { AccessPage } from "./AccessPage";
 import { BattleStage } from "./BattleStage";
+import { NotFoundPage } from "./NotFoundPage";
 
 export function App() {
   return (
@@ -14,6 +15,7 @@ export function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/access" element={<AccessPage />} />
         <Route path="/battle" element={<BattleStage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );
