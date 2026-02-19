@@ -576,6 +576,7 @@ button:disabled:hover {
 
 .landing-gloves {
   position: relative;
+  z-index: 20;
   width: 100%;
   max-width: 640px;
   height: clamp(200px, 32vw, 280px);
