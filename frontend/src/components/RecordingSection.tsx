@@ -32,6 +32,20 @@ function getPipelineStepIndex(step: string | undefined): number {
   return -1;
 }
 
+/**
+ * Break a wall-of-text into lines of roughly `wordsPerLine` words.
+ * If the text already contains newlines, respect them.
+ */
+function formatLyrics(text: string, wordsPerLine = 8): string {
+  if (text.includes('\n')) return text;
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  for (let i = 0; i < words.length; i += wordsPerLine) {
+    lines.push(words.slice(i, i + wordsPerLine).join(' '));
+  }
+  return lines.join('\n');
+}
+
 export function RecordingSection({
   state,
   countdown,
@@ -58,7 +72,8 @@ export function RecordingSection({
   const calculatedBars = bpm > 0 ? Math.round((bpm * recordDuration) / 240) : 0;
 
   const lastAiTurn = [...turnHistory].reverse().find((turn) => turn.player === 'ai');
-  const opponentLyrics = lastAiTurn?.lyrics;
+  const rawLyrics = lastAiTurn?.lyrics;
+  const opponentLyrics = rawLyrics ? formatLyrics(rawLyrics) : undefined;
 
   const currentStepIndex = getPipelineStepIndex(status?.step);
   const showPipeline = currentStepIndex >= 0;
@@ -78,21 +93,24 @@ export function RecordingSection({
     if (isProcessing && showPipeline) {
       return (
         <div className="battle-grid__status-content">
-          <div className="pipeline-steps">
+          <div className="pipeline">
             {PIPELINE_STEPS.map((step, index) => {
               const isActive = index === currentStepIndex;
               const isComplete = index < currentStepIndex;
               const isPending = index > currentStepIndex;
+              const isLast = index === PIPELINE_STEPS.length - 1;
               return (
                 <div
                   key={step.key}
-                  className={`pipeline-step ${isActive ? 'pipeline-step--active' : ''} ${isComplete ? 'pipeline-step--complete' : ''}`}
-                  style={{ opacity: isPending ? 0.4 : 1 }}
+                  className={`pipeline__step ${isActive ? 'pipeline__step--active' : ''} ${isComplete ? 'pipeline__step--complete' : ''} ${isPending ? 'pipeline__step--pending' : ''}`}
                 >
-                  <span className="pipeline-step__icon">
-                    {isComplete ? '[x]' : isActive ? '[>]' : '[ ]'}
-                  </span>
-                  <span>{step.label}</span>
+                  <div className="pipeline__indicator">
+                    <div className="pipeline__dot">
+                      {isComplete ? '\u2713' : isActive ? '\u25B6' : ''}
+                    </div>
+                    {!isLast && <div className={`pipeline__line ${isComplete ? 'pipeline__line--filled' : ''}`} />}
+                  </div>
+                  <span className="pipeline__label">{step.label}</span>
                 </div>
               );
             })}
