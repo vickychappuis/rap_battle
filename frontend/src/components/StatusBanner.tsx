@@ -13,6 +13,7 @@ interface StatusBannerProps {
 
 const STATE_LABELS: Record<SessionState, string> = {
   idle: 'Ready',
+  connecting: 'Starting...',
   awaiting_user: 'Your Turn',
   recording: 'Recording',
   processing: 'Processing',
@@ -28,6 +29,7 @@ export function StatusBanner({
   turnsPerPlayer,
 }: StatusBannerProps) {
   if (state === 'idle') return null;
+  if (state === 'connecting') return <div className="card text-center"><span className="stamp">Starting...</span></div>;
 
   const label = STATE_LABELS[state];
   const isRecording = state === 'recording';

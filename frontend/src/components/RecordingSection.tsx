@@ -1,9 +1,28 @@
-import { useSession } from '../hooks/useSession';
+import type { SessionState, UseSessionReturn } from '../hooks/useSession';
 
-export function RecordingSection() {
-  const { startBattle, startRecording, state, countdown, sessionData, turnHistory } = useSession();
+interface RecordingSectionProps {
+  state: SessionState;
+  countdown: number;
+  sessionData: UseSessionReturn['sessionData'];
+  turnHistory: UseSessionReturn['turnHistory'];
+  error: UseSessionReturn['error'];
+  startBattle: UseSessionReturn['startBattle'];
+  startRecording: UseSessionReturn['startRecording'];
+}
 
+export function RecordingSection({
+  state,
+  countdown,
+  sessionData,
+  turnHistory,
+  error,
+  startBattle,
+  startRecording,
+}: RecordingSectionProps) {
   const isRecording = state === 'recording';
+  const isConnecting = state === 'connecting';
+  const isProcessing = state === 'processing' || state === 'playing_response';
+  const isClickable = !isRecording && !isConnecting && !isProcessing;
   const hasSession = sessionData !== null;
 
   // Calculate bars from BPM and record duration
@@ -24,21 +43,29 @@ export function RecordingSection() {
   ];
   const randomTaunt = round1Taunts[Math.floor(Math.random() * round1Taunts.length)];
 
+  const micLabel = () => {
+    if (isConnecting) return 'Starting...';
+    if (isRecording) return 'Recording...';
+    if (state === 'processing') return 'Processing...';
+    if (state === 'playing_response') return 'AI Responding...';
+    if (hasSession) return 'Start Recording';
+    return 'Start Battle';
+  };
+
   return (
     <div className="recording-grid">
       {/* Left: Mic area (square, clickable) */}
       <div
         className="recording-grid__mic"
-        onClick={!isRecording ? (hasSession ? startRecording : startBattle) : undefined}
+        onClick={isClickable ? (hasSession ? startRecording : startBattle) : undefined}
         style={{
-          cursor: isRecording ? 'default' : 'pointer',
+          cursor: isClickable ? 'pointer' : 'default',
           backgroundColor: isRecording ? 'rgba(230, 28, 76, 0.1)' : 'transparent',
+          opacity: isConnecting || isProcessing ? 0.6 : 1,
         }}
       >
         <img src="/mic.png" alt="Microphone" className={`recording-grid__mic-img${hasSession && !isRecording ? ' recording-grid__mic-img--cta' : ''}`} />
-        <p className="recording-grid__mic-label">
-          {isRecording ? 'Recording...' : hasSession ? 'Start Recording' : 'Start Battle'}
-        </p>
+        <p className="recording-grid__mic-label">{micLabel()}</p>
       </div>
 
       {/* Top-right: Timer / Stats */}
@@ -48,6 +75,8 @@ export function RecordingSection() {
             <span className="recording-grid__countdown">{countdown}</span>
             <span className="recording-grid__countdown-label">seconds left</span>
           </>
+        ) : isProcessing ? (
+          <p className="recording-grid__taunt">Generating response...</p>
         ) : hasSession ? (
           <>
             <div className="recording-grid__stat">
@@ -77,6 +106,12 @@ export function RecordingSection() {
           <p className="recording-grid__taunt">Your opponent awaits...</p>
         )}
       </div>
+
+      {error && (
+        <div style={{ gridColumn: '1 / -1', color: 'red', fontWeight: 'bold', padding: '8px' }}>
+          Error: {error}
+        </div>
+      )}
     </div>
   );
 }

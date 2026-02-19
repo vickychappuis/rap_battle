@@ -4,7 +4,7 @@
 
 export function FlyerHeader() {
   return (
-    <header className="flyer-header relative" role="banner">
+    <header className="flyer-header relative z-10" role="banner">
       <img
         src="/rap_arena_logo.png"
         alt="Rap Arena"

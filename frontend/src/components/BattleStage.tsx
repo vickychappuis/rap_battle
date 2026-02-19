@@ -28,7 +28,7 @@ export function BattleStage() {
   return (
     <div>
       <FlyerHeader />
-      <main className="main-content xerox-grain paper-texture -mt-12 -z-1">
+      <main className="main-content xerox-grain paper-texture -mt-12">
         <div className="container">
           <PlayerCard />
 
@@ -45,7 +45,15 @@ export function BattleStage() {
             </div>
           )}
 
-          <RecordingSection />
+          <RecordingSection
+            state={state}
+            countdown={countdown}
+            sessionData={sessionData}
+            turnHistory={turnHistory}
+            error={error}
+            startBattle={startBattle}
+            startRecording={startRecording}
+          />
 
           {sessionData && (
             <div className="mt-2 text-center text-sm text-xerox-gray mono">

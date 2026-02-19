@@ -31,6 +31,7 @@ import { useAudioEngine } from './useAudioEngine';
 
 export type SessionState =
   | 'idle'
+  | 'connecting'
   | 'awaiting_user'
   | 'recording'
   | 'processing'
@@ -131,11 +132,35 @@ export function useSession(): UseSessionReturn {
     [stopPolling, scheduleAiResponse]
   );
 
-  // Start a new battle (creates session + starts base track)
+  // Shared recording logic — takes session directly to avoid React state timing issues
+  const doRecording = useCallback(async (session: SessionResponse) => {
+    setState('recording');
+
+    const durationSec = session.record_duration;
+    setCountdown(durationSec);
+
+    const countdownInterval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    const audioBlob = await recordAudio(durationSec * 1000);
+    await uploadRecording(session.session_id, audioBlob);
+
+    setState('processing');
+    startPolling(session.session_id);
+  }, [recordAudio, startPolling]);
+
+  // Start a new battle (creates session + starts base track + immediately starts recording)
   const startBattle = useCallback(async () => {
     try {
       setError(null);
-      setState('idle');
+      setState('connecting');
       setStatus(null);
       setSessionData(null);
 
@@ -145,13 +170,16 @@ export function useSession(): UseSessionReturn {
 
       // Start base track (requires user gesture)
       await startBaseTrack(session.base_track_url, session.bpm);
+
+      // Proceed directly into recording (turn 1)
+      await doRecording(session);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start battle');
       setState('error');
     }
-  }, [startBaseTrack]);
+  }, [startBaseTrack, doRecording]);
 
-  // Start recording for current turn
+  // Start recording for subsequent turns
   const startRecording = useCallback(async () => {
     if (!sessionData) {
       setError('No session created');
@@ -160,37 +188,13 @@ export function useSession(): UseSessionReturn {
     }
 
     try {
-      setError(null); // Clear any previous error
-      setState('recording');
-
-      // Run countdown
-      const durationSec = sessionData.record_duration;
-      setCountdown(durationSec);
-
-      const countdownInterval = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(countdownInterval);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      // Record audio
-      const audioBlob = await recordAudio(durationSec * 1000);
-
-      // Upload recording
-      await uploadRecording(sessionData.session_id, audioBlob);
-
-      // Start polling for status
-      setState('processing');
-      startPolling(sessionData.session_id);
+      setError(null);
+      await doRecording(sessionData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Recording failed');
       setState('error');
     }
-  }, [sessionData, recordAudio, startPolling]);
+  }, [sessionData, doRecording]);
 
   // Retry current turn after error
   const retryTurn = useCallback(async () => {
