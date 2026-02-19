@@ -4,7 +4,6 @@
 
 import { useSession } from "../hooks/useSession";
 import { FlyerHeader } from "./FlyerHeader";
-import { BattleTimeline } from "./BattleTimeline";
 import { RecordingSection } from "./RecordingSection";
 
 export function BattleStage() {
@@ -43,14 +42,7 @@ export function BattleStage() {
             startRecording={startRecording}
           />
 
-          {turnHistory.length > 0 && (
-            <div className="mt-12">
-              <h2 className="mb-4">Battle History</h2>
-              <BattleTimeline turnHistory={turnHistory} />
-            </div>
-          )}
-
-          {state === "complete" && (
+{state === "complete" && (
             <div className="mt-12 text-center animate-in">
               <p className="text-lg">Battle Complete!</p>
               <p className="text-sm text-xerox-gray mt-2">
