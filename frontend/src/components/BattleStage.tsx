@@ -4,10 +4,7 @@
 
 import { useSession } from "../hooks/useSession";
 import { FlyerHeader } from "./FlyerHeader";
-import { StatusBanner } from "./StatusBanner";
-import { PipelineProgress } from "./PipelineProgress";
 import { BattleTimeline } from "./BattleTimeline";
-import { PlayerCard } from "./PlayerCard";
 import { RecordingSection } from "./RecordingSection";
 
 export function BattleStage() {
@@ -17,7 +14,6 @@ export function BattleStage() {
     status,
     error,
     countdown,
-    currentRound,
     turnHistory,
     startBattle,
     startRecording,
@@ -30,15 +26,6 @@ export function BattleStage() {
       <FlyerHeader />
       <main className="main-content xerox-grain paper-texture -mt-12">
         <div className="container">
-          <PlayerCard />
-
-          <StatusBanner
-            state={state}
-            countdown={countdown}
-            currentRound={currentRound}
-            turnsPerPlayer={turnsPerPlayer}
-          />
-
           {error && (
             <div className="card text-spray-paint-red mt-4">
               <strong>Error:</strong> {error}
@@ -50,21 +37,11 @@ export function BattleStage() {
             countdown={countdown}
             sessionData={sessionData}
             turnHistory={turnHistory}
+            status={status}
             error={error}
             startBattle={startBattle}
             startRecording={startRecording}
           />
-
-          {sessionData && (
-            <div className="mt-2 text-center text-sm text-xerox-gray mono">
-              {sessionData.bpm} BPM | {sessionData.bars_per_turn} bars |{" "}
-              {sessionData.record_duration}s per turn
-            </div>
-          )}
-
-          <div className="mt-3">
-            <PipelineProgress status={status} />
-          </div>
 
           {turnHistory.length > 0 && (
             <div className="mt-12">

@@ -2,16 +2,26 @@
  * PlayerCard - Profile card for the battle opponent.
  */
 
-export function PlayerCard() {
+import type { OpponentProfile } from "../data/opponents";
+
+type PlayerCardProps = {
+  opponent: OpponentProfile;
+};
+
+export function PlayerCard({ opponent }: PlayerCardProps) {
   return (
     <div className="player-card">
-      <img src="/max_gorilla.png" alt="Max Gorilla" className="player-card__avatar" />
+      <img
+        src={opponent.imageSrc}
+        alt={opponent.name}
+        className="player-card__avatar"
+      />
       <div className="player-card__info">
-        <h2 className="player-card__name">Max Gorilla</h2>
-        <p className="player-card__subtitle">Age: 35</p>
-        <p className="player-card__detail">Claims: Enlightened, above clout and beef</p>
-        <p className="player-card__detail">Reality: Obsessed with being respected</p>
-        <p className="player-card__detail">Extra Info: Checks Reddit threads about himself every night before bed</p>
+        <h2 className="player-card__name">{opponent.name}</h2>
+        <p className="player-card__subtitle">Age: {opponent.age}</p>
+        <p className="player-card__detail">Claims: {opponent.claims}</p>
+        <p className="player-card__detail">Reality: {opponent.reality}</p>
+        <p className="player-card__detail">Extra Info: {opponent.extraInfo}</p>
       </div>
     </div>
   );

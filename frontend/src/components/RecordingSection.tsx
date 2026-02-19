@@ -1,13 +1,35 @@
+import { useState } from 'react';
 import type { SessionState, UseSessionReturn } from '../hooks/useSession';
+import type { SessionStatus } from '../api/session';
+import { OPPONENTS } from '../data/opponents';
+import { PlayerCard } from './PlayerCard';
 
 interface RecordingSectionProps {
   state: SessionState;
   countdown: number;
   sessionData: UseSessionReturn['sessionData'];
   turnHistory: UseSessionReturn['turnHistory'];
+  status: SessionStatus | null;
   error: UseSessionReturn['error'];
   startBattle: UseSessionReturn['startBattle'];
   startRecording: UseSessionReturn['startRecording'];
+}
+
+type PipelineStep = 'transcribing' | 'generating_lyrics' | 'generating_audio' | 'complete';
+
+const PIPELINE_STEPS: { key: PipelineStep; label: string }[] = [
+  { key: 'transcribing', label: 'Transcribing' },
+  { key: 'generating_lyrics', label: 'Generating Lyrics' },
+  { key: 'generating_audio', label: 'Generating Audio' },
+  { key: 'complete', label: 'Complete' },
+];
+
+function getPipelineStepIndex(step: string | undefined): number {
+  if (!step) return -1;
+  const index = PIPELINE_STEPS.findIndex((s) => s.key === step);
+  if (index >= 0) return index;
+  if (step === 'complete') return PIPELINE_STEPS.length - 1;
+  return -1;
 }
 
 export function RecordingSection({
@@ -15,33 +37,31 @@ export function RecordingSection({
   countdown,
   sessionData,
   turnHistory,
+  status,
   error,
   startBattle,
   startRecording,
 }: RecordingSectionProps) {
+  const [opponent] = useState(() => {
+    const randomIndex = Math.floor(Math.random() * OPPONENTS.length);
+    return OPPONENTS[randomIndex];
+  });
+
   const isRecording = state === 'recording';
   const isConnecting = state === 'connecting';
   const isProcessing = state === 'processing' || state === 'playing_response';
   const isClickable = !isRecording && !isConnecting && !isProcessing;
   const hasSession = sessionData !== null;
 
-  // Calculate bars from BPM and record duration
   const bpm = sessionData?.bpm ?? 0;
   const recordDuration = sessionData?.record_duration ?? 0;
   const calculatedBars = bpm > 0 ? Math.round((bpm * recordDuration) / 240) : 0;
 
-  // Get the last AI response from turn history
   const lastAiTurn = [...turnHistory].reverse().find((turn) => turn.player === 'ai');
   const opponentLyrics = lastAiTurn?.lyrics;
 
-  // Taunts for round 1 when there's no opponent response yet
-  const round1Taunts = [
-    "Think you got bars? Prove it.",
-    "The mic is waiting...",
-    "Show 'em what you got.",
-    "Your opponent is ready. Are you?",
-  ];
-  const randomTaunt = round1Taunts[Math.floor(Math.random() * round1Taunts.length)];
+  const currentStepIndex = getPipelineStepIndex(status?.step);
+  const showPipeline = currentStepIndex >= 0;
 
   const micLabel = () => {
     if (isConnecting) return 'Starting...';
@@ -52,11 +72,91 @@ export function RecordingSection({
     return 'Start Battle';
   };
 
+  // Left-bottom content changes based on pipeline stage
+  const renderLeftBottom = () => {
+    // Stage 2: Processing - show pipeline progress
+    if (isProcessing && showPipeline) {
+      return (
+        <div className="battle-grid__status-content">
+          <div className="pipeline-steps">
+            {PIPELINE_STEPS.map((step, index) => {
+              const isActive = index === currentStepIndex;
+              const isComplete = index < currentStepIndex;
+              const isPending = index > currentStepIndex;
+              return (
+                <div
+                  key={step.key}
+                  className={`pipeline-step ${isActive ? 'pipeline-step--active' : ''} ${isComplete ? 'pipeline-step--complete' : ''}`}
+                  style={{ opacity: isPending ? 0.4 : 1 }}
+                >
+                  <span className="pipeline-step__icon">
+                    {isComplete ? '[x]' : isActive ? '[>]' : '[ ]'}
+                  </span>
+                  <span>{step.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // Stage 3: Response text available
+    if (opponentLyrics) {
+      return (
+        <div className="battle-grid__status-content">
+          <span className="battle-grid__response-label">Opponent's last verse:</span>
+          <p className="battle-grid__response-text">{opponentLyrics}</p>
+        </div>
+      );
+    }
+
+    // Recording state - show countdown
+    if (isRecording) {
+      return (
+        <div className="battle-grid__status-content battle-grid__status-content--centered">
+          <span className="battle-grid__countdown">{countdown}</span>
+          <span className="battle-grid__countdown-label">seconds left</span>
+        </div>
+      );
+    }
+
+    // Stage 1: Default - show stats
+    return (
+      <div className="battle-grid__status-content battle-grid__status-content--centered">
+        <div className="battle-grid__stats">
+          <div className="battle-grid__stat">
+            <span className="battle-grid__stat-value">{bpm || 90}</span>
+            <span className="battle-grid__stat-label">BPM</span>
+          </div>
+          <div className="battle-grid__stat">
+            <span className="battle-grid__stat-value">{calculatedBars || 16}</span>
+            <span className="battle-grid__stat-label">Bars</span>
+          </div>
+          <div className="battle-grid__stat">
+            <span className="battle-grid__stat-value">{recordDuration || 42}</span>
+            <span className="battle-grid__stat-label">Secs</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="recording-grid">
-      {/* Left: Mic area (square, clickable) */}
+    <div className="battle-grid">
+      {/* Left top: Opponent info */}
+      <div className="battle-grid__opponent">
+        <PlayerCard opponent={opponent} />
+      </div>
+
+      {/* Left bottom: Pipeline status (stats / generating / response) */}
+      <div className="battle-grid__status">
+        {renderLeftBottom()}
+      </div>
+
+      {/* Right: Mic (full height) */}
       <div
-        className="recording-grid__mic"
+        className="battle-grid__mic"
         onClick={isClickable ? (hasSession ? startRecording : startBattle) : undefined}
         style={{
           cursor: isClickable ? 'pointer' : 'default',
@@ -64,47 +164,12 @@ export function RecordingSection({
           opacity: isConnecting || isProcessing ? 0.6 : 1,
         }}
       >
-        <img src="/mic.png" alt="Microphone" className={`recording-grid__mic-img${hasSession && !isRecording ? ' recording-grid__mic-img--cta' : ''}`} />
-        <p className="recording-grid__mic-label">{micLabel()}</p>
-      </div>
-
-      {/* Top-right: Timer / Stats */}
-      <div className="recording-grid__timer">
-        {isRecording ? (
-          <>
-            <span className="recording-grid__countdown">{countdown}</span>
-            <span className="recording-grid__countdown-label">seconds left</span>
-          </>
-        ) : isProcessing ? (
-          <p className="recording-grid__taunt">Generating response...</p>
-        ) : hasSession ? (
-          <>
-            <div className="recording-grid__stat">
-              <span className="recording-grid__stat-value">{bpm}</span>
-              <span className="recording-grid__stat-label">BPM</span>
-            </div>
-            <div className="recording-grid__stat">
-              <span className="recording-grid__stat-value">{calculatedBars}</span>
-              <span className="recording-grid__stat-label">Bars</span>
-            </div>
-          </>
-        ) : (
-          <p className="recording-grid__taunt">Click to drop the beat</p>
-        )}
-      </div>
-
-      {/* Bottom-right: Opponent response */}
-      <div className="recording-grid__response">
-        {opponentLyrics ? (
-          <>
-            <span className="recording-grid__response-label">Opponent's last verse:</span>
-            <p className="recording-grid__response-text">{opponentLyrics}</p>
-          </>
-        ) : hasSession ? (
-          <p className="recording-grid__taunt">{randomTaunt}</p>
-        ) : (
-          <p className="recording-grid__taunt">Your opponent awaits...</p>
-        )}
+        <img
+          src="/mic.png"
+          alt="Microphone"
+          className={`battle-grid__mic-img${hasSession && !isRecording ? ' battle-grid__mic-img--cta' : ''}`}
+        />
+        <p className="battle-grid__mic-label">{micLabel()}</p>
       </div>
 
       {error && (
