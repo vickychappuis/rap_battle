@@ -46,6 +46,19 @@ export function getInviteCode(): string | null {
   return localStorage.getItem('invite_code');
 }
 
+export async function requestInviteCode(contact: string): Promise<void> {
+  const response = await fetch('/api/access/request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contact }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(error.detail || 'Request failed');
+  }
+}
+
 export async function validateInviteCode(code: string): Promise<void> {
   const response = await fetch('/api/access/validate', {
     method: 'POST',

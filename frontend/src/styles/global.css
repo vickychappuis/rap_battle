@@ -792,6 +792,48 @@ button:disabled:hover {
   margin: -0.5rem 0;
 }
 
+.access-request {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: -0.25rem;
+}
+
+.access-request-toggle {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  text-transform: none;
+  letter-spacing: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-xerox-gray);
+  padding: 0.25rem 0;
+  box-shadow: none;
+}
+
+.access-request-toggle:hover {
+  background: transparent;
+  color: var(--color-ink-black);
+  transform: none;
+  box-shadow: none;
+  text-decoration: underline;
+}
+
+.access-request-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  animation: fade-slide-up 0.2s ease-out;
+}
+
+.access-request-success {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--color-ink-black);
+  animation: fade-slide-up 0.2s ease-out;
+}
+
 /* ===== 404 Page ===== */
 
 .not-found-page {
