@@ -7,6 +7,10 @@
     {
       "source": "/static/:path*",
       "destination": "https://rap-arena.onrender.com/static/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
