@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://REPLACE_WITH_YOUR_RENDER_URL/api/:path*"
+      "destination": "https://rap-arena.onrender.com"
     },
     {
       "source": "/static/:path*",
-      "destination": "https://REPLACE_WITH_YOUR_RENDER_URL/static/:path*"
+      "destination": "https://rap-arena.onrender.com"
     }
   ]
 }
