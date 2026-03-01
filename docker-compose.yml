@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
+    dns: 8.8.8.8
     ports:
       - "8000:8000"
     volumes:
