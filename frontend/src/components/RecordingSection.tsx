@@ -64,6 +64,7 @@ export function RecordingSection({
   const isRecording = state === 'recording';
   const isConnecting = state === 'connecting';
   const isProcessing = state === 'processing' || state === 'playing_response';
+  const isComplete = state === 'complete';
   const isClickable = !isRecording && !isConnecting && !isProcessing;
   const hasSession = sessionData !== null;
 
@@ -83,6 +84,7 @@ export function RecordingSection({
     if (isRecording) return 'Recording...';
     if (state === 'processing') return 'Processing...';
     if (state === 'playing_response') return 'AI Responding...';
+    if (isComplete) return 'New Battle';
     if (hasSession) return 'Start Recording';
     return 'Start Battle';
   };
@@ -188,7 +190,7 @@ export function RecordingSection({
       {/* Right: Mic (full height) */}
       <div
         className="battle-grid__mic"
-        onClick={isClickable ? (hasSession ? startRecording : startBattle) : undefined}
+        onClick={isClickable ? (isComplete ? startBattle : hasSession ? startRecording : startBattle) : undefined}
         style={{
           cursor: isClickable ? 'pointer' : 'default',
           backgroundColor: isRecording ? 'rgba(230, 28, 76, 0.1)' : 'transparent',
