@@ -119,22 +119,22 @@ export function RecordingSection({
       );
     }
 
-    // Stage 3: Response text available
-    if (opponentLyrics) {
-      return (
-        <div className="battle-grid__status-content">
-          <span className="battle-grid__response-label">Opponent's last verse:</span>
-          <p className="battle-grid__response-text">{opponentLyrics}</p>
-        </div>
-      );
-    }
-
     // Recording state - show countdown
     if (isRecording) {
       return (
         <div className="battle-grid__status-content battle-grid__status-content--centered">
           <span className="battle-grid__countdown">{countdown}</span>
           <span className="battle-grid__countdown-label">seconds left</span>
+        </div>
+      );
+    }
+
+    // Stage 3: Response text available
+    if (opponentLyrics) {
+      return (
+        <div className="battle-grid__status-content">
+          <span className="battle-grid__response-label">Opponent's last verse:</span>
+          <p className="battle-grid__response-text">{opponentLyrics}</p>
         </div>
       );
     }
