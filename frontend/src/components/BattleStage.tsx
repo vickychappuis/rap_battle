@@ -37,6 +37,12 @@ export function BattleStage() {
     refreshCredits();
   }, [refreshCredits]);
 
+  useEffect(() => {
+    if (noCredits) {
+      navigate("/no-credits", { replace: true });
+    }
+  }, [noCredits, navigate]);
+
   const turnsPerPlayer = sessionData?.turns_per_player ?? 2;
 
   return (
@@ -44,22 +50,13 @@ export function BattleStage() {
       <FlyerHeader />
       <main className="main-content xerox-grain paper-texture -mt-12">
         <div className="container">
-          {credits !== null && credits >= 0 && !noCredits && state === "idle" && (
+          {credits !== null && credits >= 0 && state === "idle" && (
             <div className="text-center mt-4 text-sm text-xerox-gray">
               {credits} battle credit{credits !== 1 ? "s" : ""} remaining
             </div>
           )}
 
-          {noCredits && (
-            <div className="card text-center mt-4">
-              <p className="text-lg">You're out of battle credits!</p>
-              <p className="text-sm text-xerox-gray mt-2">
-                Paid subscriptions coming soon.
-              </p>
-            </div>
-          )}
-
-          {error && !noCredits && (
+          {error && (
             <div className="card text-spray-paint-red mt-4">
               <strong>Error:</strong> {error}
             </div>
