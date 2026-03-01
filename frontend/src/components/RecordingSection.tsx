@@ -89,8 +89,8 @@ export function RecordingSection({
 
   // Left-bottom content changes based on pipeline stage
   const renderLeftBottom = () => {
-    // Stage 2: Processing - show pipeline progress
-    if (isProcessing && showPipeline) {
+    // Stage 2: Processing - show pipeline progress (not when already complete)
+    if (isProcessing && showPipeline && status?.step !== 'complete') {
       return (
         <div className="battle-grid__status-content">
           <div className="pipeline">
