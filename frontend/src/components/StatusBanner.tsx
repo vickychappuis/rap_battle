@@ -18,6 +18,7 @@ const STATE_LABELS: Record<SessionState, string> = {
   recording: 'Recording',
   processing: 'Processing',
   playing_response: 'AI Responding',
+  judging: 'Judging...',
   complete: 'Battle Complete',
   error: 'Error',
 };
