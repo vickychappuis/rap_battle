@@ -23,12 +23,19 @@ export function BattleStage() {
     status,
     error,
     countdown,
+    credits,
+    noCredits,
     turnHistory,
     winner,
     judgeReason,
     startBattle,
     startRecording,
+    refreshCredits,
   } = useSession();
+
+  useEffect(() => {
+    refreshCredits();
+  }, [refreshCredits]);
 
   const turnsPerPlayer = sessionData?.turns_per_player ?? 2;
 
@@ -37,7 +44,22 @@ export function BattleStage() {
       <FlyerHeader />
       <main className="main-content xerox-grain paper-texture -mt-12">
         <div className="container">
-          {error && (
+          {credits !== null && credits >= 0 && !noCredits && state === "idle" && (
+            <div className="text-center mt-4 text-sm text-xerox-gray">
+              {credits} battle credit{credits !== 1 ? "s" : ""} remaining
+            </div>
+          )}
+
+          {noCredits && (
+            <div className="card text-center mt-4">
+              <p className="text-lg">You're out of battle credits!</p>
+              <p className="text-sm text-xerox-gray mt-2">
+                Paid subscriptions coming soon.
+              </p>
+            </div>
+          )}
+
+          {error && !noCredits && (
             <div className="card text-spray-paint-red mt-4">
               <strong>Error:</strong> {error}
             </div>

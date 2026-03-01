@@ -94,9 +94,22 @@ export async function createSession(): Promise<SessionResponse> {
       localStorage.removeItem('invite_code');
       throw new Error('Invalid invite code. Please try again.');
     }
+    if (response.status === 403) {
+      const err = await response.json().catch(() => ({ detail: 'No credits' }));
+      throw new Error(err.detail || 'No battle credits remaining.');
+    }
     throw new Error(`Failed to create session: ${response.statusText}`);
   }
 
+  return response.json();
+}
+
+export async function getCredits(): Promise<{ remaining: number }> {
+  const code = getInviteCode();
+  if (!code) return { remaining: 0 };
+
+  const response = await fetch(`/api/access/credits?code=${encodeURIComponent(code)}`);
+  if (!response.ok) return { remaining: 0 };
   return response.json();
 }
 

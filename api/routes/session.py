@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException, Header
 from typing import Optional
 
-from api.routes.access import is_valid_invite_code
+from api.routes.access import is_valid_invite_code, _use_credit
 from api.models.session import (
     SessionResponse,
     SessionStatus,
@@ -38,6 +38,12 @@ async def create_session(x_invite_code: Optional[str] = Header(None)):
     """
     if not x_invite_code or not is_valid_invite_code(x_invite_code):
         raise HTTPException(status_code=401, detail="Invalid invite code")
+
+    if not _use_credit(x_invite_code):
+        raise HTTPException(
+            status_code=403,
+            detail="No battle credits remaining. Paid subscriptions coming soon!",
+        )
 
     session_id = str(uuid.uuid4())
 

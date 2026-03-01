@@ -25,6 +25,7 @@ import {
   uploadRecording,
   getSessionStatus,
   retryTurn as retryTurnApi,
+  getCredits,
 } from '../api/session';
 import type { SessionResponse, SessionStatus, TurnData } from '../api/session';
 import { useAudioEngine } from './useAudioEngine';
@@ -46,6 +47,8 @@ export interface UseSessionReturn {
   status: SessionStatus | null;
   error: string | null;
   countdown: number;
+  credits: number | null;
+  noCredits: boolean;
 
   // Multi-turn fields
   currentTurn: number;
@@ -63,6 +66,7 @@ export interface UseSessionReturn {
   startRecording: () => Promise<void>;
   retryTurn: () => Promise<void>;
   startOver: () => void;
+  refreshCredits: () => Promise<void>;
 }
 
 const POLL_INTERVAL_MS = 1000;
@@ -73,6 +77,8 @@ export function useSession(): UseSessionReturn {
   const [status, setStatus] = useState<SessionStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [credits, setCredits] = useState<number | null>(null);
+  const [noCredits, setNoCredits] = useState(false);
 
   const pollIntervalRef = useRef<number | null>(null);
   const { startBaseTrack, recordAudio, scheduleAiResponse } = useAudioEngine();
@@ -166,10 +172,17 @@ export function useSession(): UseSessionReturn {
     startPolling(session.session_id);
   }, [recordAudio, startPolling]);
 
+  const refreshCredits = useCallback(async () => {
+    const { remaining } = await getCredits();
+    setCredits(remaining);
+    setNoCredits(remaining <= 0);
+  }, []);
+
   // Start a new battle (creates session + starts base track + immediately starts recording)
   const startBattle = useCallback(async () => {
     try {
       setError(null);
+      setNoCredits(false);
       setState('connecting');
       setStatus(null);
       setSessionData(null);
@@ -178,16 +191,24 @@ export function useSession(): UseSessionReturn {
       const session = await createSession();
       setSessionData(session);
 
+      // Refresh credits after successful session creation
+      refreshCredits();
+
       // Start base track (requires user gesture)
       await startBaseTrack(session.base_track_url, session.bpm);
 
       // Proceed directly into recording (turn 1)
       await doRecording(session);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start battle');
+      const message = err instanceof Error ? err.message : 'Failed to start battle';
+      if (message.includes('No battle credits')) {
+        setNoCredits(true);
+        setCredits(0);
+      }
+      setError(message);
       setState('error');
     }
-  }, [startBaseTrack, doRecording]);
+  }, [startBaseTrack, doRecording, refreshCredits]);
 
   // Start recording for subsequent turns
   const startRecording = useCallback(async () => {
@@ -255,6 +276,8 @@ export function useSession(): UseSessionReturn {
     status,
     error,
     countdown,
+    credits,
+    noCredits,
 
     // Multi-turn fields
     currentTurn,
@@ -272,5 +295,6 @@ export function useSession(): UseSessionReturn {
     startRecording,
     retryTurn,
     startOver,
+    refreshCredits,
   };
 }

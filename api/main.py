@@ -15,7 +15,10 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+from api.db import init_tables
 from api.routes import session_router, access_router
+
+init_tables()
 
 # Create FastAPI app
 app = FastAPI(

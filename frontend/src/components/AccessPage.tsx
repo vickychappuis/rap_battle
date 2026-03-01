@@ -44,14 +44,20 @@ export function AccessPage() {
     e.preventDefault();
     setRequestError("");
 
-    if (!contact.trim()) {
-      setRequestError("Drop your email or handle.");
+    const trimmed = contact.trim();
+    if (!trimmed) {
+      setRequestError("Drop your email.");
+      return;
+    }
+
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) {
+      setRequestError("Please enter a valid email address.");
       return;
     }
 
     setRequestLoading(true);
     try {
-      await requestInviteCode(contact.trim());
+      await requestInviteCode(trimmed);
       setRequestSent(true);
     } catch (err) {
       setRequestError(err instanceof Error ? err.message : "Request failed");
@@ -105,7 +111,7 @@ export function AccessPage() {
               </button>
             ) : requestSent ? (
               <p className="access-request-success">
-                Got it — we'll reach out.
+                Check your email — your invite code is on the way!
               </p>
             ) : (
               <form className="access-request-form" onSubmit={handleRequest}>
@@ -114,7 +120,7 @@ export function AccessPage() {
                   type="text"
                   value={contact}
                   onChange={(e) => setContact(e.target.value)}
-                  placeholder="email or @handle"
+                  placeholder="your@email.com"
                   autoComplete="off"
                   disabled={requestLoading}
                   autoFocus
