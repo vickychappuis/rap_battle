@@ -84,20 +84,23 @@ Beat 2: "you're pro but"    (3 words)
 Beat 3: "I'm the"           (2 words)
 Beat 4: "one winning"       (2 words)
 ...
-Beat {grid_beats}: "TRUTH"  (1 word, held)
+Beat {grid_beats}: "truth"  (1 word, held)
 ```
+
+## Style Guide — Modern Freestyle
+
+Write in a modern hip-hop freestyle style:
+- **Direct and personal** — raw self-expression over complex metaphors
+- **Simple, striking language** — short statements, repetition, conversational tone
+- **Themes:** identity, lifestyle, emotions, relationships, internet culture, modern references
+- **Tone:** authentic, diary-like, sometimes fragmented — mood over technical cleverness
+- **Avoid** old-school battle rap clichés, forced punchlines, or over-the-top wordplay
 
 ## Content Rules
 
 **DO:**
-- Write original, creative battle-style rap that responds to the opponent
-- Make it punchy, clever, and impactful
-- Natural phrasing (beats can have 1, 2, or 3 words as needed)
-- Keep it clean and TTS-friendly
-
-**DON'T:**
-- No slurs, hate speech, or threats
-- Avoid excessive profanity
+- Keep it natural, modern, and TTS-friendly
+- Prioritize authenticity and feeling over bars-for-bars-sake
 
 ## Output Format
 
@@ -112,7 +115,7 @@ You must respond with **ONLY** valid JSON matching this structure (no extra text
     "I'm the",
     "one winning",
     ...
-    "TRUTH"
+    "truth"
   ]
 }}
 ```
