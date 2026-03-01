@@ -28,6 +28,7 @@ export interface SessionStatus {
     | 'generating_lyrics'
     | 'generating_audio'
     | 'playing_response'
+    | 'judging'
     | 'complete'
     | 'error';
   current_turn: number;
@@ -38,6 +39,8 @@ export interface SessionStatus {
   ai_audio_url?: string;
   error?: string;
   retry_count?: number;
+  winner?: string;
+  judge_reason?: string;
 }
 
 const API_BASE = '/api/session';

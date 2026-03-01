@@ -24,6 +24,8 @@ export function BattleStage() {
     error,
     countdown,
     turnHistory,
+    winner,
+    judgeReason,
     startBattle,
     startRecording,
   } = useSession();
@@ -48,15 +50,20 @@ export function BattleStage() {
             turnHistory={turnHistory}
             status={status}
             error={error}
+            winner={winner}
+            judgeReason={judgeReason}
             startBattle={startBattle}
             startRecording={startRecording}
           />
 
-{state === "complete" && (
+{(state === "complete" || state === "judging") && (
             <div className="mt-12 text-center animate-in">
-              <p className="text-lg">Battle Complete!</p>
+              <p className="text-lg">Battle Ended!</p>
               <p className="text-sm text-xerox-gray mt-2">
-                {turnsPerPlayer} rounds fought. Click "New Battle" to go again
+                {turnsPerPlayer} rounds fought.{" "}
+                {state === "complete"
+                  ? 'Click "New Battle" to go again'
+                  : "The judge is deliberating..."}
               </p>
             </div>
           )}

@@ -14,6 +14,7 @@ class PipelineStep(str, Enum):
     GENERATING_LYRICS = "generating_lyrics"
     GENERATING_AUDIO = "generating_audio"
     PLAYING_RESPONSE = "playing_response"
+    JUDGING = "judging"
     COMPLETE = "complete"
     ERROR = "error"
 
@@ -55,3 +56,5 @@ class SessionStatus(BaseModel):
     error: Optional[str] = None
     retry_count: int = 0
     timing: Optional[dict] = None  # Timing data for current turn
+    winner: Optional[str] = None
+    judge_reason: Optional[str] = None

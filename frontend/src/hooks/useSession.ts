@@ -36,6 +36,7 @@ export type SessionState =
   | 'recording'
   | 'processing'
   | 'playing_response'
+  | 'judging'
   | 'complete'
   | 'error';
 
@@ -54,6 +55,8 @@ export interface UseSessionReturn {
   isUserTurn: boolean;
   isFinalRound: boolean;
   retryCount: number;
+  winner: string | null;
+  judgeReason: string | null;
 
   // Actions
   startBattle: () => Promise<void>;
@@ -83,6 +86,8 @@ export function useSession(): UseSessionReturn {
   const isUserTurn = currentTurn % 2 === 1;
   const isFinalRound = currentRound === turnsPerPlayer;
   const retryCount = status?.retry_count ?? 0;
+  const winner = status?.winner ?? null;
+  const judgeReason = status?.judge_reason ?? null;
 
   // Clear polling
   const stopPolling = useCallback(() => {
@@ -103,10 +108,15 @@ export function useSession(): UseSessionReturn {
           setStatus(newStatus);
 
           // Handle step transitions
-          if (newStatus.step === 'complete') {
+          if (newStatus.step === 'judging') {
+            if (newStatus.ai_audio_url && state !== 'judging') {
+              setState('playing_response');
+              await scheduleAiResponse(newStatus.ai_audio_url);
+            }
+            setState('judging');
+          } else if (newStatus.step === 'complete') {
             stopPolling();
-            // Schedule AI response playback if available
-            if (newStatus.ai_audio_url) {
+            if (state !== 'judging' && newStatus.ai_audio_url) {
               setState('playing_response');
               await scheduleAiResponse(newStatus.ai_audio_url);
             }
@@ -254,6 +264,8 @@ export function useSession(): UseSessionReturn {
     isUserTurn,
     isFinalRound,
     retryCount,
+    winner,
+    judgeReason,
 
     // Actions
     startBattle,

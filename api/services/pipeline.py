@@ -66,6 +66,10 @@ class SessionState:
     error: Optional[str] = None
     timing: Optional[dict] = None
 
+    # Judge results
+    winner: Optional[str] = None
+    judge_reason: Optional[str] = None
+
     # Internal state
     audio_path: Optional[str] = None
     lyricist_output: Optional[LyricistOutput] = None
@@ -287,6 +291,8 @@ class PipelineService:
 
             # Determine next state
             if session.current_turn > session.total_turns:
+                session.step = PipelineStep.JUDGING
+                self._judge_battle(session)
                 session.step = PipelineStep.COMPLETE
             else:
                 session.step = PipelineStep.AWAITING_USER
@@ -301,6 +307,49 @@ class PipelineService:
             else:
                 session.error = f"Attempt {session.retry_count} failed: {str(e)}. You can retry."
                 # Keep audio file for retry
+
+    def _judge_battle(self, session: SessionState) -> None:
+        """Use AI to judge the battle and pick a winner."""
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=self.openai_api_key)
+
+            transcript_lines = []
+            for turn in session.turn_history:
+                if turn.player == "user":
+                    transcript_lines.append(f"USER verse: {turn.transcription or '(no transcription)'}")
+                else:
+                    transcript_lines.append(f"AI verse: {turn.lyrics or '(no lyrics)'}")
+            transcript = "\n".join(transcript_lines)
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a legendary hip-hop battle judge — think DJ Khaled meets Sway Calloway. "
+                            "You just watched a rap battle between a human challenger (USER) and an AI MC. "
+                            "Judge them on bars, flow, punchlines, wordplay, and stage presence. "
+                            "Keep it real — talk like you're on a rap battle stage, with energy and slang. "
+                            "Respond ONLY with valid JSON: "
+                            '{"winner": "user" or "ai", "reason": "one punchy sentence, hip-hop style"}'
+                        ),
+                    },
+                    {"role": "user", "content": transcript},
+                ],
+                temperature=0.7,
+            )
+
+            result_text = response.choices[0].message.content or ""
+            result = json.loads(result_text)
+            session.winner = result.get("winner", "ai")
+            session.judge_reason = result.get("reason", "")
+            print(f"🏆 Judge decision: {session.winner} — {session.judge_reason}")
+        except Exception as e:
+            print(f"⚠️  Judge failed: {e}")
+            session.winner = "draw"
+            session.judge_reason = "The judge couldn't decide — it's a draw!"
 
     def _cleanup_audio(self, session: SessionState) -> None:
         """Clean up temp audio file."""

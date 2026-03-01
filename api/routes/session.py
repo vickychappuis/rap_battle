@@ -174,4 +174,6 @@ async def get_session_status(session_id: str):
         ai_audio_url=session.ai_audio_url,
         error=session.error,
         retry_count=session.retry_count,
+        winner=session.winner,
+        judge_reason=session.judge_reason,
     )

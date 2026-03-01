@@ -11,6 +11,8 @@ interface RecordingSectionProps {
   turnHistory: UseSessionReturn['turnHistory'];
   status: SessionStatus | null;
   error: UseSessionReturn['error'];
+  winner: string | null;
+  judgeReason: string | null;
   startBattle: UseSessionReturn['startBattle'];
   startRecording: UseSessionReturn['startRecording'];
 }
@@ -53,6 +55,8 @@ export function RecordingSection({
   turnHistory,
   status,
   error,
+  winner,
+  judgeReason,
   startBattle,
   startRecording,
 }: RecordingSectionProps) {
@@ -64,8 +68,9 @@ export function RecordingSection({
   const isRecording = state === 'recording';
   const isConnecting = state === 'connecting';
   const isProcessing = state === 'processing' || state === 'playing_response';
+  const isJudging = state === 'judging';
   const isComplete = state === 'complete';
-  const isClickable = !isRecording && !isConnecting && !isProcessing;
+  const isClickable = !isRecording && !isConnecting && !isProcessing && !isJudging;
   const hasSession = sessionData !== null;
 
   const bpm = sessionData?.bpm ?? 0;
@@ -84,6 +89,7 @@ export function RecordingSection({
     if (isRecording) return 'Recording...';
     if (state === 'processing') return 'Processing...';
     if (state === 'playing_response') return 'AI Responding...';
+    if (isJudging) return 'Judging...';
     if (isComplete) return 'New Battle';
     if (hasSession) return 'Start Recording';
     return 'Start Battle';
@@ -175,17 +181,41 @@ export function RecordingSection({
     );
   };
 
+  const showJudgePanel = (isComplete && winner) || isJudging;
+
   return (
     <div className="battle-grid">
-      {/* Left top: Opponent info */}
-      <div className="battle-grid__opponent">
-        <PlayerCard opponent={opponent} />
-      </div>
+      {showJudgePanel ? (
+        <div className="battle-grid__judge-panel">
+          {isJudging ? (
+            <div className="judge-deciding">
+              <span className="judge-deciding__text recording">Deciding the winner...</span>
+            </div>
+          ) : (
+            <div className="judge-result animate-in">
+              <span className="judge-result__label">The Verdict</span>
+              <span className="judge-result__winner">
+                {winner === 'user' ? 'You' : winner === 'ai' ? opponent.name : 'Draw'}
+              </span>
+              {judgeReason && (
+                <p className="judge-result__reason">{judgeReason}</p>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Left top: Opponent info */}
+          <div className="battle-grid__opponent">
+            <PlayerCard opponent={opponent} />
+          </div>
 
-      {/* Left bottom: Pipeline status (stats / generating / response) */}
-      <div className="battle-grid__status">
-        {renderLeftBottom()}
-      </div>
+          {/* Left bottom: Pipeline status (stats / generating / response) */}
+          <div className="battle-grid__status">
+            {renderLeftBottom()}
+          </div>
+        </>
+      )}
 
       {/* Right: Mic (full height) */}
       <div
@@ -194,7 +224,7 @@ export function RecordingSection({
         style={{
           cursor: isClickable ? 'pointer' : 'default',
           backgroundColor: isRecording ? 'rgba(230, 28, 76, 0.1)' : 'transparent',
-          opacity: isConnecting || isProcessing ? 0.6 : 1,
+          opacity: isConnecting || isProcessing || isJudging ? 0.6 : 1,
         }}
       >
         <img
