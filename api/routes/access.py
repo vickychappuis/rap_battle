@@ -4,7 +4,7 @@ import os
 import re
 import secrets
 import string
-from datetime import datetime, date
+from datetime import datetime
 
 import requests as http_requests
 from fastapi import APIRouter, HTTPException, Query
@@ -15,35 +15,29 @@ from api.db import get_conn
 
 router = APIRouter(prefix="/api/access", tags=["access"])
 
-INVITE_CODES: set[str] = set(
-    code.strip()
-    for code in os.environ.get("INVITE_CODES", "").split(",")
-    if code.strip()
-)
-
 ADMIN_KEY = os.environ.get("ADMIN_KEY", "")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL", "")
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MAX_REQUESTS_PER_DAY = 5
-INITIAL_CREDITS = 2
+INITIAL_CREDITS = 4
 
 
 # --- DB helpers ---
 
 def _use_credit(code: str) -> bool:
-    """Decrement credit. Returns True if allowed (has credits or legacy unlimited code)."""
+    """Decrement credit. Returns True if allowed, False if out of credits."""
     try:
         conn = get_conn()
     except Exception:
-        return True
+        return False
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT remaining FROM credits WHERE code = %s", (code,))
             row = cur.fetchone()
             if not row:
-                return True  # legacy code without credit tracking
+                return False
             if row[0] <= 0:
                 return False
             cur.execute(
@@ -57,29 +51,43 @@ def _use_credit(code: str) -> bool:
 
 
 def _get_remaining_credits(code: str) -> int:
-    """Returns remaining credits, or -1 if code has no credit tracking (unlimited)."""
+    """Returns remaining credits, or 0 if code not found."""
     try:
         conn = get_conn()
     except Exception:
-        return -1
+        return 0
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT remaining FROM credits WHERE code = %s", (code,))
             row = cur.fetchone()
             if not row:
-                return -1
+                return 0
             return row[0]
     finally:
         conn.close()
 
 
-def _save_credit(code: str, contact: str) -> None:
+def _code_exists(code: str) -> bool:
+    """Check if a code exists in the credits table."""
+    try:
+        conn = get_conn()
+    except Exception:
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM credits WHERE code = %s", (code,))
+            return cur.fetchone() is not None
+    finally:
+        conn.close()
+
+
+def _save_credit(code: str, contact: str, credits: int = INITIAL_CREDITS) -> None:
     conn = get_conn()
     try:
         with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO credits (code, remaining, contact) VALUES (%s, %s, %s)",
-                (code, INITIAL_CREDITS, contact),
+                (code, credits, contact),
             )
         conn.commit()
     finally:
@@ -180,8 +188,8 @@ def _notify_admin(contact: str, code: str) -> None:
 # --- Utilities ---
 
 def is_valid_invite_code(code: str) -> bool:
-    """Check if an invite code is in the allowed list."""
-    return code.strip() in INVITE_CODES
+    """Check if an invite code exists in the database."""
+    return _code_exists(code.strip())
 
 
 def _generate_code() -> str:
@@ -229,7 +237,6 @@ async def request_invite(req: InviteRequest):
         raise HTTPException(status_code=429, detail="Too many requests today. Try again tomorrow.")
 
     code = _generate_code()
-    INVITE_CODES.add(code)
     _save_credit(code, contact)
     _save_request(contact, code)
 
@@ -254,9 +261,9 @@ async def list_requests(key: str = Query(...)):
 
 
 @router.post("/generate")
-async def generate_invite(key: str = Query(...)):
-    """Admin: generate a new invite code and add it to the live set."""
+async def generate_invite(key: str = Query(...), credits: int = Query(default=INITIAL_CREDITS)):
+    """Admin: generate a new invite code."""
     _check_admin(key)
     code = _generate_code()
-    INVITE_CODES.add(code)
-    return {"code": code}
+    _save_credit(code, "admin", credits)
+    return {"code": code, "credits": credits}
