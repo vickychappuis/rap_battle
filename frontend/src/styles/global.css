@@ -454,6 +454,21 @@ button:disabled:hover {
   letter-spacing: 0.05em;
 }
 
+.battle-grid__countdown-inline {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.battle-grid__countdown-inline .battle-grid__countdown {
+  font-size: 1.75rem;
+}
+
+.battle-grid__countdown-inline .battle-grid__countdown-label {
+  font-size: 0.8rem;
+}
+
 /* Response text */
 .battle-grid__response-label {
   font-family: var(--font-body);

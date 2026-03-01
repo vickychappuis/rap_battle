@@ -119,12 +119,25 @@ export function RecordingSection({
       );
     }
 
-    // Recording state - show countdown
+    // Recording state - show countdown (and opponent lyrics if available)
     if (isRecording) {
       return (
-        <div className="battle-grid__status-content battle-grid__status-content--centered">
-          <span className="battle-grid__countdown">{countdown}</span>
-          <span className="battle-grid__countdown-label">seconds left</span>
+        <div className="battle-grid__status-content">
+          {opponentLyrics ? (
+            <>
+              <span className="battle-grid__response-label">Opponent's last verse:</span>
+              <p className="battle-grid__response-text">{opponentLyrics}</p>
+              <div className="battle-grid__countdown-inline">
+                <span className="battle-grid__countdown">{countdown}</span>
+                <span className="battle-grid__countdown-label">seconds left</span>
+              </div>
+            </>
+          ) : (
+            <div className="battle-grid__status-content--centered">
+              <span className="battle-grid__countdown">{countdown}</span>
+              <span className="battle-grid__countdown-label">seconds left</span>
+            </div>
+          )}
         </div>
       );
     }
