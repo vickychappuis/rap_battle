@@ -34,7 +34,10 @@ INITIAL_CREDITS = 2
 
 def _use_credit(code: str) -> bool:
     """Decrement credit. Returns True if allowed (has credits or legacy unlimited code)."""
-    conn = get_conn()
+    try:
+        conn = get_conn()
+    except Exception:
+        return True
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT remaining FROM credits WHERE code = %s", (code,))
@@ -55,7 +58,10 @@ def _use_credit(code: str) -> bool:
 
 def _get_remaining_credits(code: str) -> int:
     """Returns remaining credits, or -1 if code has no credit tracking (unlimited)."""
-    conn = get_conn()
+    try:
+        conn = get_conn()
+    except Exception:
+        return -1
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT remaining FROM credits WHERE code = %s", (code,))
