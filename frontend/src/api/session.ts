@@ -45,71 +45,20 @@ export interface SessionStatus {
 
 const API_BASE = '/api/session';
 
-export function getInviteCode(): string | null {
-  return localStorage.getItem('invite_code');
-}
-
-export async function requestInviteCode(contact: string): Promise<void> {
-  const response = await fetch('/api/access/request', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contact }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(error.detail || 'Request failed');
-  }
-}
-
-export async function validateInviteCode(code: string): Promise<void> {
-  const response = await fetch('/api/access/validate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ invite_code: code }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(error.detail || 'Invalid invite code');
-  }
-}
-
 export async function createSession(): Promise<SessionResponse> {
-  const code = getInviteCode();
-  if (!code) {
-    throw new Error('No invite code. Please authenticate first.');
-  }
-
   const response = await fetch(API_BASE, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Invite-Code': code,
-    },
+    headers: { 'Content-Type': 'application/json' },
   });
 
   if (!response.ok) {
-    if (response.status === 401) {
-      localStorage.removeItem('invite_code');
-      throw new Error('Invalid invite code. Please try again.');
-    }
-    if (response.status === 403) {
-      const err = await response.json().catch(() => ({ detail: 'No credits' }));
-      throw new Error(err.detail || 'No battle credits remaining.');
+    if (response.status === 429) {
+      const err = await response.json().catch(() => ({ detail: 'Rate limit exceeded' }));
+      throw new Error(err.detail || 'Too many battles. Try again later.');
     }
     throw new Error(`Failed to create session: ${response.statusText}`);
   }
 
-  return response.json();
-}
-
-export async function getCredits(): Promise<{ remaining: number }> {
-  const code = getInviteCode();
-  if (!code) return { remaining: 0 };
-
-  const response = await fetch(`/api/access/credits?code=${encodeURIComponent(code)}`);
-  if (!response.ok) return { remaining: 0 };
   return response.json();
 }
 

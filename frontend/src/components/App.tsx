@@ -2,11 +2,9 @@
  * App - Root application component with client-side routing.
  */
 
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LandingPage } from "./LandingPage";
-import { AccessPage } from "./AccessPage";
 import { BattleStage } from "./BattleStage";
-import { NoCreditsPage } from "./NoCreditsPage";
 import { NotFoundPage } from "./NotFoundPage";
 
 export function App() {
@@ -14,9 +12,9 @@ export function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/access" element={<AccessPage />} />
+        <Route path="/access" element={<Navigate to="/battle" replace />} />
         <Route path="/battle" element={<BattleStage />} />
-        <Route path="/no-credits" element={<NoCreditsPage />} />
+        <Route path="/no-credits" element={<Navigate to="/battle" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>

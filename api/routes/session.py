@@ -3,12 +3,10 @@
 import os
 import uuid
 import tempfile
+import time
 from pathlib import Path
 
-from fastapi import APIRouter, UploadFile, File, HTTPException, Header
-from typing import Optional
-
-from api.routes.access import is_valid_invite_code, _use_credit
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from api.models.session import (
     SessionResponse,
     SessionStatus,
@@ -28,22 +26,42 @@ BPM = int(os.environ.get("BPM", 90))
 BARS_PER_TURN = int(os.environ.get("BARS_PER_TURN", 16))
 TURNS_PER_PLAYER = int(os.environ.get("TURNS_PER_PLAYER", 2))
 
+# Global rate limiting
+RATE_LIMIT_HOURLY = 4
+RATE_LIMIT_DAILY = 15
+_session_timestamps: list[float] = []
+
+
+def _check_rate_limit() -> str | None:
+    now = time.time()
+    hour_ago = now - 3600
+    day_ago = now - 86400
+
+    # Prune old entries
+    _session_timestamps[:] = [t for t in _session_timestamps if t > day_ago]
+
+    hourly = sum(1 for t in _session_timestamps if t > hour_ago)
+    daily = len(_session_timestamps)
+
+    if hourly >= RATE_LIMIT_HOURLY:
+        return "Rate limit exceeded: max 4 battles per hour. Try again later."
+    if daily >= RATE_LIMIT_DAILY:
+        return "Rate limit exceeded: max 15 battles per day. Try again tomorrow."
+    return None
+
 
 @router.post("", response_model=SessionResponse)
-async def create_session(x_invite_code: Optional[str] = Header(None)):
+async def create_session():
     """
-    Create a new battle session. Requires a valid invite code.
+    Create a new battle session with global rate limiting.
 
     Returns session config including BPM, bars per turn, and base track URL.
     """
-    if not x_invite_code or not is_valid_invite_code(x_invite_code):
-        raise HTTPException(status_code=401, detail="Invalid invite code")
+    limit_msg = _check_rate_limit()
+    if limit_msg:
+        raise HTTPException(status_code=429, detail=limit_msg)
 
-    if not _use_credit(x_invite_code):
-        raise HTTPException(
-            status_code=403,
-            detail="No battle credits remaining. Paid subscriptions coming soon!",
-        )
+    _session_timestamps.append(time.time())
 
     session_id = str(uuid.uuid4())
 
