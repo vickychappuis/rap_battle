@@ -1,10 +1,30 @@
 """Database connection and table initialization for Postgres (Supabase)."""
 
 import os
+import socket
+from urllib.parse import urlparse, urlunparse
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
+
+def _force_ipv4(url: str) -> str:
+    """Replace the hostname with its IPv4 address to avoid IPv6 issues."""
+    if not url:
+        return url
+    parsed = urlparse(url)
+    if not parsed.hostname:
+        return url
+    try:
+        ipv4 = socket.getaddrinfo(parsed.hostname, None, socket.AF_INET)[0][4][0]
+        netloc = f"{parsed.username}:{parsed.password}@{ipv4}" if parsed.username else ipv4
+        if parsed.port:
+            netloc += f":{parsed.port}"
+        return urlunparse(parsed._replace(netloc=netloc))
+    except (socket.gaierror, IndexError):
+        return url
+
+
+DATABASE_URL = _force_ipv4(os.environ.get("DATABASE_URL", ""))
 
 
 def get_conn():

@@ -338,10 +338,11 @@ class PipelineService:
                     },
                     {"role": "user", "content": transcript},
                 ],
+                response_format={"type": "json_object"},
                 temperature=0.7,
             )
 
-            result_text = response.choices[0].message.content or ""
+            result_text = response.choices[0].message.content or "{}"
             result = json.loads(result_text)
             session.winner = result.get("winner", "ai")
             session.judge_reason = result.get("reason", "")
