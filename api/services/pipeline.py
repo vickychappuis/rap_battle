@@ -310,47 +310,55 @@ class PipelineService:
 
     def _judge_battle(self, session: SessionState) -> None:
         """Use AI to judge the battle and pick a winner."""
-        try:
-            from openai import OpenAI
-            client = OpenAI(api_key=self.openai_api_key)
+        from openai import OpenAI
+        client = OpenAI(api_key=self.openai_api_key)
 
-            transcript_lines = []
-            for turn in session.turn_history:
-                if turn.player == "user":
-                    transcript_lines.append(f"USER verse: {turn.transcription or '(no transcription)'}")
-                else:
-                    transcript_lines.append(f"AI verse: {turn.lyrics or '(no lyrics)'}")
-            transcript = "\n".join(transcript_lines)
+        transcript_lines = []
+        for turn in session.turn_history:
+            if turn.player == "user":
+                transcript_lines.append(f"USER verse: {turn.transcription or '(no transcription)'}")
+            else:
+                transcript_lines.append(f"AI verse: {turn.lyrics or '(no lyrics)'}")
+        transcript = "\n".join(transcript_lines)
 
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a legendary hip-hop battle judge — think DJ Khaled meets Sway Calloway. "
-                            "You just watched a rap battle between a human challenger (USER) and an AI MC. "
-                            "Judge them on bars, flow, punchlines, wordplay, and stage presence. "
-                            "Keep it real — talk like you're on a rap battle stage, with energy and slang. "
-                            "Respond ONLY with valid JSON: "
-                            '{"winner": "user" or "ai", "reason": "one punchy sentence, hip-hop style"}'
-                        ),
-                    },
-                    {"role": "user", "content": transcript},
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.7,
-            )
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a legendary hip-hop battle judge — think DJ Khaled meets Sway Calloway. "
+                    "You just watched a rap battle between a human challenger (USER) and an AI MC. "
+                    "Judge them on bars, flow, punchlines, wordplay, and stage presence. "
+                    "Keep it real — talk like you're on a rap battle stage, with energy and slang. "
+                    "Respond ONLY with valid JSON: "
+                    '{"winner": "user" or "ai", "reason": "one punchy sentence, hip-hop style"}'
+                ),
+            },
+            {"role": "user", "content": transcript},
+        ]
 
-            result_text = response.choices[0].message.content or "{}"
-            result = json.loads(result_text)
-            session.winner = result.get("winner", "ai")
-            session.judge_reason = result.get("reason", "")
-            print(f"🏆 Judge decision: {session.winner} — {session.judge_reason}")
-        except Exception as e:
-            print(f"⚠️  Judge failed: {e}")
-            session.winner = "draw"
-            session.judge_reason = "The judge couldn't decide — it's a draw!"
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=messages,
+                    response_format={"type": "json_object"},
+                    temperature=0.7,
+                )
+                result_text = response.choices[0].message.content or "{}"
+                result = json.loads(result_text)
+                winner = result.get("winner", "")
+                if winner not in ("user", "ai"):
+                    raise ValueError(f"Invalid winner value: '{winner}'")
+                session.winner = winner
+                session.judge_reason = result.get("reason", "")
+                print(f"🏆 Judge decision: {session.winner} — {session.judge_reason}")
+                return
+            except Exception as e:
+                print(f"⚠️  Judge attempt {attempt}/{max_attempts} failed: {e}")
+
+        session.winner = "draw"
+        session.judge_reason = "The judge couldn't decide — it's a draw!"
 
     def _cleanup_audio(self, session: SessionState) -> None:
         """Clean up temp audio file."""
