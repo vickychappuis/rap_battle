@@ -74,7 +74,10 @@ export function useSession(): UseSessionReturn {
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
 
-  const pollIntervalRef = useRef<number | null>(null);
+  const pollTimeoutRef = useRef<number | null>(null);
+  const pollActiveRef = useRef(false);
+  const stateRef = useRef<SessionState>('idle');
+  const audioScheduledForTurnRef = useRef<number | null>(null);
   const { startBaseTrack, recordAudio, scheduleAiResponse } = useAudioEngine();
 
   // Derived multi-turn values
@@ -89,62 +92,86 @@ export function useSession(): UseSessionReturn {
   const winner = status?.winner ?? null;
   const judgeReason = status?.judge_reason ?? null;
 
+  const setStateTracked = useCallback((next: SessionState) => {
+    stateRef.current = next;
+    setState(next);
+  }, []);
+
   // Clear polling
   const stopPolling = useCallback(() => {
-    if (pollIntervalRef.current !== null) {
-      clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
+    pollActiveRef.current = false;
+    if (pollTimeoutRef.current !== null) {
+      clearTimeout(pollTimeoutRef.current);
+      pollTimeoutRef.current = null;
     }
   }, []);
 
-  // Poll for status updates
+  // Poll for status updates using serialized setTimeout chain
   const startPolling = useCallback(
     (sessionId: string) => {
       stopPolling();
+      pollActiveRef.current = true;
 
-      pollIntervalRef.current = window.setInterval(async () => {
+      const pollOnce = async () => {
+        if (!pollActiveRef.current) return;
+
         try {
           const newStatus = await getSessionStatus(sessionId);
           setStatus(newStatus);
 
-          // Handle step transitions
+          const shouldPlayAudio =
+            newStatus.ai_audio_url &&
+            audioScheduledForTurnRef.current !== newStatus.current_turn;
+
           if (newStatus.step === 'judging') {
-            if (newStatus.ai_audio_url && state !== 'judging') {
-              setState('playing_response');
-              await scheduleAiResponse(newStatus.ai_audio_url);
+            if (shouldPlayAudio && stateRef.current !== 'judging') {
+              audioScheduledForTurnRef.current = newStatus.current_turn;
+              setStateTracked('playing_response');
+              await scheduleAiResponse(newStatus.ai_audio_url!);
             }
-            setState('judging');
+            setStateTracked('judging');
           } else if (newStatus.step === 'complete') {
             stopPolling();
-            if (state !== 'judging' && newStatus.ai_audio_url) {
-              setState('playing_response');
-              await scheduleAiResponse(newStatus.ai_audio_url);
+            if (shouldPlayAudio && stateRef.current !== 'judging') {
+              audioScheduledForTurnRef.current = newStatus.current_turn;
+              setStateTracked('playing_response');
+              await scheduleAiResponse(newStatus.ai_audio_url!);
             }
-            setState('complete');
+            setStateTracked('complete');
+            return;
           } else if (newStatus.step === 'awaiting_user') {
             stopPolling();
-            // AI finished, waiting for next user turn
-            if (newStatus.ai_audio_url) {
-              setState('playing_response');
-              await scheduleAiResponse(newStatus.ai_audio_url);
+            if (shouldPlayAudio) {
+              audioScheduledForTurnRef.current = newStatus.current_turn;
+              setStateTracked('playing_response');
+              await scheduleAiResponse(newStatus.ai_audio_url!);
             }
-            setState('awaiting_user');
+            setStateTracked('awaiting_user');
+            return;
           } else if (newStatus.step === 'error') {
             stopPolling();
             setError(newStatus.error || 'Unknown error');
-            setState('error');
+            setStateTracked('error');
+            return;
           }
         } catch (err) {
           console.error('Polling error:', err);
         }
-      }, POLL_INTERVAL_MS);
+
+        // Schedule next poll only after this one fully completes
+        if (pollActiveRef.current) {
+          pollTimeoutRef.current = window.setTimeout(pollOnce, POLL_INTERVAL_MS);
+        }
+      };
+
+      pollTimeoutRef.current = window.setTimeout(pollOnce, POLL_INTERVAL_MS);
     },
-    [stopPolling, scheduleAiResponse]
+    [stopPolling, scheduleAiResponse, setStateTracked]
   );
 
   // Shared recording logic — takes session directly to avoid React state timing issues
   const doRecording = useCallback(async (session: SessionResponse) => {
-    setState('recording');
+    setStateTracked('recording');
 
     const durationSec = session.record_duration;
     setCountdown(durationSec);
@@ -162,17 +189,18 @@ export function useSession(): UseSessionReturn {
     const audioBlob = await recordAudio(durationSec * 1000);
     await uploadRecording(session.session_id, audioBlob);
 
-    setState('processing');
+    setStateTracked('processing');
     startPolling(session.session_id);
-  }, [recordAudio, startPolling]);
+  }, [recordAudio, startPolling, setStateTracked]);
 
   // Start a new battle (creates session + starts base track + immediately starts recording)
   const startBattle = useCallback(async () => {
     try {
       setError(null);
-      setState('connecting');
+      setStateTracked('connecting');
       setStatus(null);
       setSessionData(null);
+      audioScheduledForTurnRef.current = null;
 
       const session = await createSession();
       setSessionData(session);
@@ -182,15 +210,15 @@ export function useSession(): UseSessionReturn {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to start battle';
       setError(message);
-      setState('error');
+      setStateTracked('error');
     }
-  }, [startBaseTrack, doRecording]);
+  }, [startBaseTrack, doRecording, setStateTracked]);
 
   // Start recording for subsequent turns
   const startRecording = useCallback(async () => {
     if (!sessionData) {
       setError('No session created');
-      setState('error');
+      setStateTracked('error');
       return;
     }
 
@@ -199,9 +227,9 @@ export function useSession(): UseSessionReturn {
       await doRecording(sessionData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Recording failed');
-      setState('error');
+      setStateTracked('error');
     }
-  }, [sessionData, doRecording]);
+  }, [sessionData, doRecording, setStateTracked]);
 
   // Retry current turn after error
   const retryTurn = useCallback(async () => {
@@ -215,29 +243,28 @@ export function useSession(): UseSessionReturn {
       const result = await retryTurnApi(sessionData.session_id);
 
       if (result.status === 'need_rerecord') {
-        // Audio expired, need to re-record
-        setState('awaiting_user');
+        setStateTracked('awaiting_user');
         setError(result.message || 'Please record again');
       } else {
-        // Pipeline restarted
-        setState('processing');
+        setStateTracked('processing');
         startPolling(sessionData.session_id);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Retry failed');
-      setState('error');
+      setStateTracked('error');
     }
-  }, [sessionData, startPolling]);
+  }, [sessionData, startPolling, setStateTracked]);
 
   // Start over (reset everything)
   const startOver = useCallback(() => {
     stopPolling();
-    setState('idle');
+    setStateTracked('idle');
     setSessionData(null);
     setStatus(null);
     setError(null);
     setCountdown(0);
-  }, [stopPolling]);
+    audioScheduledForTurnRef.current = null;
+  }, [stopPolling, setStateTracked]);
 
   // Cleanup on unmount
   useEffect(() => {
