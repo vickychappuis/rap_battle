@@ -59,7 +59,7 @@ export interface UseSessionReturn {
   judgeReason: string | null;
 
   // Actions
-  startBattle: () => Promise<void>;
+  startBattle: (opponentName?: string) => Promise<void>;
   startRecording: () => Promise<void>;
   retryTurn: () => Promise<void>;
   startOver: () => void;
@@ -194,7 +194,7 @@ export function useSession(): UseSessionReturn {
   }, [recordAudio, startPolling, setStateTracked]);
 
   // Start a new battle (creates session + starts base track + immediately starts recording)
-  const startBattle = useCallback(async () => {
+  const startBattle = useCallback(async (opponentName?: string) => {
     try {
       setError(null);
       setStateTracked('connecting');
@@ -202,7 +202,7 @@ export function useSession(): UseSessionReturn {
       setSessionData(null);
       audioScheduledForTurnRef.current = null;
 
-      const session = await createSession();
+      const session = await createSession(opponentName);
       setSessionData(session);
 
       await startBaseTrack(session.base_track_url, session.bpm);

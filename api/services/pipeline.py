@@ -48,6 +48,7 @@ class SessionState:
     bpm: int
     bars_per_turn: int
     turns_per_player: int
+    opponent_name: str = "the challenger"
 
     # Derived values (calculated in __post_init__)
     grid_beats: int = field(init=False)
@@ -313,26 +314,13 @@ class PipelineService:
         from openai import OpenAI
         client = OpenAI(api_key=self.openai_api_key)
 
-        transcript_lines = []
-        for turn in session.turn_history:
-            if turn.player == "user":
-                transcript_lines.append(f"USER verse: {turn.transcription or '(no transcription)'}")
-            else:
-                transcript_lines.append(f"AI verse: {turn.lyrics or '(no lyrics)'}")
-        transcript = "\n".join(transcript_lines)
+        from prompts.judge_prompt import build_judge_system_prompt, build_judge_transcript
+
+        opponent = session.opponent_name
+        transcript = build_judge_transcript(session.turn_history, opponent)
 
         messages = [
-            {
-                "role": "system",
-                "content": (
-                    "You are a legendary hip-hop battle judge — think DJ Khaled meets Sway Calloway. "
-                    "You just watched a rap battle between a human challenger (USER) and an AI MC. "
-                    "Judge them on bars, flow, punchlines, wordplay, and stage presence. "
-                    "Keep it real — talk like you're on a rap battle stage, with energy and slang. "
-                    "Respond ONLY with valid JSON: "
-                    '{"winner": "user" or "ai", "reason": "one punchy sentence, hip-hop style"}'
-                ),
-            },
+            {"role": "system", "content": build_judge_system_prompt(opponent)},
             {"role": "user", "content": transcript},
         ]
 

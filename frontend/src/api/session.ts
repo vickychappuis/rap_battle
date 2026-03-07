@@ -45,10 +45,11 @@ export interface SessionStatus {
 
 const API_BASE = '/api/session';
 
-export async function createSession(): Promise<SessionResponse> {
+export async function createSession(opponentName?: string): Promise<SessionResponse> {
   const response = await fetch(API_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ opponent_name: opponentName }),
   });
 
   if (!response.ok) {

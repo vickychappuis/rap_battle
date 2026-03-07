@@ -31,7 +31,7 @@ class TurnData(BaseModel):
 
 class SessionCreate(BaseModel):
     """Request model for creating a new session."""
-    pass  # No parameters needed for POC
+    opponent_name: Optional[str] = None
 
 
 class SessionResponse(BaseModel):

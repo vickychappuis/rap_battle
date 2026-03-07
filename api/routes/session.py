@@ -8,6 +8,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from api.models.session import (
+    SessionCreate,
     SessionResponse,
     SessionStatus,
     PipelineStep,
@@ -51,7 +52,7 @@ def _check_rate_limit() -> str | None:
 
 
 @router.post("", response_model=SessionResponse)
-async def create_session():
+async def create_session(body: SessionCreate = SessionCreate()):
     """
     Create a new battle session with global rate limiting.
 
@@ -76,6 +77,7 @@ async def create_session():
         bpm=BPM,
         bars_per_turn=BARS_PER_TURN,
         turns_per_player=TURNS_PER_PLAYER,
+        opponent_name=body.opponent_name or "the challenger",
     )
     sessions[session_id] = session
 

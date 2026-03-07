@@ -220,7 +220,7 @@ export function RecordingSection({
       {/* Right: Mic (full height) */}
       <div
         className="battle-grid__mic"
-        onClick={isClickable ? (isComplete ? startBattle : hasSession ? startRecording : startBattle) : undefined}
+        onClick={isClickable ? (isComplete ? () => startBattle(opponent.name) : hasSession ? startRecording : () => startBattle(opponent.name)) : undefined}
         style={{
           cursor: isClickable ? 'pointer' : 'default',
           backgroundColor: isRecording ? 'rgba(230, 28, 76, 0.1)' : 'transparent',
