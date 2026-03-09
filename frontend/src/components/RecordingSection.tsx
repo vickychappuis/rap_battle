@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAnimatedDots } from '../hooks/useAnimatedDots';
 import type { SessionState, UseSessionReturn } from '../hooks/useSession';
 import type { SessionStatus } from '../api/session';
 import { OPPONENTS } from '../data/opponents';
@@ -65,6 +66,8 @@ export function RecordingSection({
     return OPPONENTS[randomIndex];
   });
 
+  const dots = useAnimatedDots(state === 'connecting');
+
   const isRecording = state === 'recording';
   const isConnecting = state === 'connecting';
   const isProcessing = state === 'processing' || state === 'playing_response';
@@ -85,7 +88,7 @@ export function RecordingSection({
   const showPipeline = currentStepIndex >= 0;
 
   const micLabel = () => {
-    if (isConnecting) return 'Starting...';
+    if (isConnecting) return `Starting${dots}`;
     if (isRecording) return 'Recording...';
     if (state === 'processing') return 'Processing...';
     if (state === 'playing_response') return 'AI Responding...';

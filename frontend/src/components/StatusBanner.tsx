@@ -2,6 +2,7 @@
  * StatusBanner - Displays current session state and turn info.
  */
 
+import { useAnimatedDots } from '../hooks/useAnimatedDots';
 import type { SessionState } from '../hooks/useSession';
 
 interface StatusBannerProps {
@@ -29,8 +30,10 @@ export function StatusBanner({
   currentRound,
   turnsPerPlayer,
 }: StatusBannerProps) {
+  const dots = useAnimatedDots(state === 'connecting');
+
   if (state === 'idle') return null;
-  if (state === 'connecting') return <div className="card text-center"><span className="stamp">Starting...</span></div>;
+  if (state === 'connecting') return <div className="card text-center"><span className="stamp">Starting{dots}</span></div>;
 
   const label = STATE_LABELS[state];
   const isRecording = state === 'recording';
