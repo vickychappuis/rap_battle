@@ -100,12 +100,20 @@ export function RecordingSection({
 
   // Left-bottom content changes based on pipeline stage
   const renderLeftBottom = () => {
-    // AI responding - show countdown
+    // AI responding - show lyrics + countdown
     if (state === 'playing_response' && countdown > 0) {
       return (
-        <div className="battle-grid__status-content battle-grid__status-content--centered">
-          <span className="battle-grid__countdown">{countdown}</span>
-          <span className="battle-grid__countdown-label">seconds left</span>
+        <div className="battle-grid__status-content">
+          {opponentLyrics && (
+            <>
+              <span className="battle-grid__response-label">Opponent's verse:</span>
+              <p className="battle-grid__response-text">{opponentLyrics}</p>
+            </>
+          )}
+          <div className={opponentLyrics ? 'battle-grid__countdown-inline' : 'battle-grid__status-content--centered'}>
+            <span className="battle-grid__countdown">{countdown}</span>
+            <span className="battle-grid__countdown-label">seconds left</span>
+          </div>
         </div>
       );
     }
