@@ -100,6 +100,16 @@ export function RecordingSection({
 
   // Left-bottom content changes based on pipeline stage
   const renderLeftBottom = () => {
+    // AI responding - show countdown
+    if (state === 'playing_response' && countdown > 0) {
+      return (
+        <div className="battle-grid__status-content battle-grid__status-content--centered">
+          <span className="battle-grid__countdown">{countdown}</span>
+          <span className="battle-grid__countdown-label">seconds left</span>
+        </div>
+      );
+    }
+
     // Stage 2: Processing - show pipeline progress (not when already complete)
     if (isProcessing && showPipeline && status?.step !== 'complete') {
       return (

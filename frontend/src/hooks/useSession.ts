@@ -78,6 +78,7 @@ export function useSession(): UseSessionReturn {
   const pollActiveRef = useRef(false);
   const stateRef = useRef<SessionState>('idle');
   const audioScheduledForTurnRef = useRef<number | null>(null);
+  const countdownIntervalRef = useRef<number | null>(null);
   const { startBaseTrack, recordAudio, scheduleAiResponse } = useAudioEngine();
 
   // Derived multi-turn values
@@ -95,6 +96,23 @@ export function useSession(): UseSessionReturn {
   const setStateTracked = useCallback((next: SessionState) => {
     stateRef.current = next;
     setState(next);
+  }, []);
+
+  const startCountdown = useCallback((seconds: number) => {
+    if (countdownIntervalRef.current !== null) {
+      clearInterval(countdownIntervalRef.current);
+    }
+    setCountdown(seconds);
+    countdownIntervalRef.current = window.setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownIntervalRef.current!);
+          countdownIntervalRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   }, []);
 
   // Clear polling
@@ -127,7 +145,9 @@ export function useSession(): UseSessionReturn {
             if (shouldPlayAudio && stateRef.current !== 'judging') {
               audioScheduledForTurnRef.current = newStatus.current_turn;
               setStateTracked('playing_response');
-              await scheduleAiResponse(newStatus.ai_audio_url!);
+              const { durationSec, done } = await scheduleAiResponse(newStatus.ai_audio_url!);
+              startCountdown(durationSec);
+              await done;
             }
             setStateTracked('judging');
           } else if (newStatus.step === 'complete') {
@@ -135,7 +155,9 @@ export function useSession(): UseSessionReturn {
             if (shouldPlayAudio && stateRef.current !== 'judging') {
               audioScheduledForTurnRef.current = newStatus.current_turn;
               setStateTracked('playing_response');
-              await scheduleAiResponse(newStatus.ai_audio_url!);
+              const { durationSec, done } = await scheduleAiResponse(newStatus.ai_audio_url!);
+              startCountdown(durationSec);
+              await done;
             }
             setStateTracked('complete');
             return;
@@ -144,7 +166,9 @@ export function useSession(): UseSessionReturn {
             if (shouldPlayAudio) {
               audioScheduledForTurnRef.current = newStatus.current_turn;
               setStateTracked('playing_response');
-              await scheduleAiResponse(newStatus.ai_audio_url!);
+              const { durationSec, done } = await scheduleAiResponse(newStatus.ai_audio_url!);
+              startCountdown(durationSec);
+              await done;
             }
             setStateTracked('awaiting_user');
             return;
@@ -166,32 +190,20 @@ export function useSession(): UseSessionReturn {
 
       pollTimeoutRef.current = window.setTimeout(pollOnce, POLL_INTERVAL_MS);
     },
-    [stopPolling, scheduleAiResponse, setStateTracked]
+    [stopPolling, scheduleAiResponse, setStateTracked, startCountdown]
   );
 
   // Shared recording logic — takes session directly to avoid React state timing issues
   const doRecording = useCallback(async (session: SessionResponse) => {
     setStateTracked('recording');
+    startCountdown(session.record_duration);
 
-    const durationSec = session.record_duration;
-    setCountdown(durationSec);
-
-    const countdownInterval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(countdownInterval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    const audioBlob = await recordAudio(durationSec * 1000);
+    const audioBlob = await recordAudio(session.record_duration * 1000);
     await uploadRecording(session.session_id, audioBlob);
 
     setStateTracked('processing');
     startPolling(session.session_id);
-  }, [recordAudio, startPolling, setStateTracked]);
+  }, [recordAudio, startPolling, setStateTracked, startCountdown]);
 
   // Start a new battle (creates session + starts base track + immediately starts recording)
   const startBattle = useCallback(async (opponentName?: string) => {
@@ -270,6 +282,9 @@ export function useSession(): UseSessionReturn {
   useEffect(() => {
     return () => {
       stopPolling();
+      if (countdownIntervalRef.current !== null) {
+        clearInterval(countdownIntervalRef.current);
+      }
     };
   }, [stopPolling]);
 

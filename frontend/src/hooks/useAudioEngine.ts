@@ -33,7 +33,7 @@ export function useAudioEngine() {
   }, [getEngine]);
 
   // Schedule AI response
-  const scheduleAiResponse = useCallback(async (url: string) => {
+  const scheduleAiResponse = useCallback(async (url: string): Promise<{ durationSec: number; done: Promise<void> }> => {
     const engine = getEngine();
     return engine.scheduleAiResponse(url);
   }, [getEngine]);

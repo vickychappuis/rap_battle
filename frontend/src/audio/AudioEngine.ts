@@ -95,7 +95,7 @@ export class AudioEngine {
    * @param url - URL of the AI response audio
    * @returns Promise that resolves when the audio finishes playing
    */
-  async scheduleAiResponse(url: string): Promise<void> {
+  async scheduleAiResponse(url: string): Promise<{ durationSec: number; done: Promise<void> }> {
     if (!this.ctx || !this.beatTracker || !this.aiResponseGain) {
       throw new Error('AudioEngine not initialized or base track not playing');
     }
@@ -115,12 +115,13 @@ export class AudioEngine {
     // Schedule playback (sample-accurate via Web Audio clock)
     this.aiResponseSource.start(scheduleTime);
 
-    // Return a promise that resolves when playback ends
-    return new Promise((resolve) => {
-      const duration = buffer.duration * 1000; // Convert to ms
-      const totalWait = waitMs + duration;
+    const durationSec = Math.ceil(buffer.duration);
+    const done = new Promise<void>((resolve) => {
+      const totalWait = waitMs + buffer.duration * 1000;
       setTimeout(resolve, totalWait);
     });
+
+    return { durationSec, done };
   }
 
   /**
