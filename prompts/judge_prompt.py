@@ -22,9 +22,9 @@ def build_judge_transcript(turn_history, opponent_name: str) -> str:
     lines = []
     for turn in turn_history:
         if turn.player == "user":
-            lines.append(f"{opponent_name} verse: {turn.transcription or '(no transcription)'}")
+            lines.append(f"Opponent verse: {turn.transcription or '(no transcription)'}")
         else:
-            lines.append(f"Opponent verse: {turn.lyrics or '(no lyrics)'}")
+            lines.append(f"{opponent_name} verse: {turn.lyrics or '(no lyrics)'}")
     return "\n".join(lines)
 
 
