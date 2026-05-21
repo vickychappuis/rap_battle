@@ -174,6 +174,11 @@ class PipelineService:
             battle_context = build_battle_context(prompt_history)
             turn_instructions = TURN_INSTRUCTIONS.get(session.ai_turn_number, "Deliver your best bars.")
 
+            # Calculate buildup/heat split (75% buildup, 25% heat)
+            buildup_bars = int(session.bars_per_turn * 0.75)
+            buildup_end_beat = buildup_bars * 4
+            heat_start_beat = buildup_end_beat + 1
+
             lyricist_input = {
                 "opponent_bars": session.transcription,
                 "bpm": session.bpm,
@@ -181,6 +186,11 @@ class PipelineService:
                 "seconds": session.seconds,
                 "grid_beats": session.grid_beats,
                 "grid_beats_minus_1": session.grid_beats - 1,
+                "buildup_end_beat": buildup_end_beat,
+                "heat_start_beat": heat_start_beat,
+                "heat_start_beat_plus_1": heat_start_beat + 1,
+                "heat_start_beat_plus_2": heat_start_beat + 2,
+                "heat_start_beat_plus_3": heat_start_beat + 3,
                 "turn_number": session.current_turn,
                 "total_turns": session.total_turns,
                 "battle_context": battle_context,

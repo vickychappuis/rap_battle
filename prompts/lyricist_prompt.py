@@ -71,33 +71,44 @@ Your opponent just said:
 
 Write **exactly {grid_beats} beat texts** that form a complete rap response.
 
-### Beat-by-Beat Structure
+### Verse Dynamics — Two Sections
 
-- **Most beats:** **1 word** (one strong word landing on the beat)
-- **Some beats:** **2 words** max (for flow and connectors)
-- **Breathing pauses:** Use `"..."` for ~4-6 beats total (spread across the verse). These create natural gaps — a real rapper breathes.
+Your verse has **two distinct sections** with different energy:
+
+**SECTION 1 — "The Buildup" (beats 1 through {buildup_end_beat}):**
+- **Relaxed, sparse flow** — ~1 word per beat
+- **2 words max** on some beats for connectors
+- **4-5 pause beats** (`"..."`) for breathing — place at bar endings and for dramatic entrance
+- Set the mood, establish your presence, build tension
+
+**SECTION 2 — "The Heat" (beats {heat_start_beat} through {grid_beats}):**
+- **Dense, aggressive flow** — ~2 words per beat
+- **No pauses** — keep the pressure relentless
+- **2-3 words per beat**, rapid-fire delivery
+- This is the climax — go hard, no breathing, stack the bars
 - **Beat {grid_beats} (final):** Exactly **1 word** (held for impact)
 
-### Examples of Good Beat Texts
+### Examples
 
 ```
+--- BUILDUP (sparse, breathing) ---
 Beat 1: "Yeah"              (1 word — opener)
-Beat 2: "..."               (pause — let the beat breathe)
+Beat 2: "..."               (pause)
 Beat 3: "You"               (1 word)
 Beat 4: "talk"              (1 word)
 Beat 5: "big"               (1 word)
 Beat 6: "but"               (1 word)
 Beat 7: "I'm real"          (2 words)
-Beat 8: "..."               (pause — end of bar, breathe)
+Beat 8: "..."               (pause — breathe)
 ...
-Beat {grid_beats}: "gone"   (1 word, held)
+--- HEAT (dense, no pauses) ---
+Beat {heat_start_beat}: "coming for your"  (3 words)
+Beat {heat_start_beat_plus_1}: "whole style"        (2 words)
+Beat {heat_start_beat_plus_2}: "I don't"            (2 words)
+Beat {heat_start_beat_plus_3}: "play around"        (2 words)
+...
+Beat {grid_beats}: "done"               (1 word, held)
 ```
-
-### Pause Placement Guide
-- Place `"..."` at the **end of bars** (every 4th or 8th beat) for natural breathing
-- Also use a pause at the **start** (beat 1 or 2) for a dramatic entrance
-- Aim for **4-6 pauses** out of {grid_beats} total beats
-- Never put two pauses back-to-back
 
 ## Style Guide — Modern Freestyle
 
@@ -139,8 +150,8 @@ You must respond with **ONLY** valid JSON matching this structure (no extra text
 
 ### Critical Requirements
 - Array `beats` must have **exactly {grid_beats} elements**
-- Most beats: **1 word**, some beats: **2 words** max
-- Include **4-6 pause beats** using `"..."` (spread out, never consecutive)
+- **Beats 1-{buildup_end_beat} (Buildup):** mostly 1 word, some 2-word beats, include 4-5 `"..."` pauses
+- **Beats {heat_start_beat}-{grid_beats} (Heat):** 2-3 words per beat, NO pauses
 - Beat {grid_beats}: **exactly 1 word** (held)
 - Return **ONLY** the JSON object, no other text
 

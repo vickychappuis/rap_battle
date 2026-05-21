@@ -321,12 +321,24 @@ class RapBattleOrchestrator:
             print("📝 Lyricist: Generating beat-by-beat lyrics...")
             lyricist_start = time.time()
 
+            # Calculate buildup/heat split (75% buildup, 25% heat)
+            bars = int(self.bpm * self.seconds / 60) // 4
+            buildup_bars = int(bars * 0.75)
+            buildup_end_beat = buildup_bars * 4
+            heat_start_beat = buildup_end_beat + 1
+
             lyricist_input = {
                 "opponent_bars": self.opponent_bars,
                 "bpm": self.bpm,
+                "bars": bars,
                 "seconds": self.seconds,
                 "grid_beats": self.grid_beats,
                 "grid_beats_minus_1": self.grid_beats - 1,
+                "buildup_end_beat": buildup_end_beat,
+                "heat_start_beat": heat_start_beat,
+                "heat_start_beat_plus_1": heat_start_beat + 1,
+                "heat_start_beat_plus_2": heat_start_beat + 2,
+                "heat_start_beat_plus_3": heat_start_beat + 3,
                 "format_instructions": self.lyricist_parser.get_format_instructions()
             }
 
