@@ -174,23 +174,21 @@ class PipelineService:
             battle_context = build_battle_context(prompt_history)
             turn_instructions = TURN_INSTRUCTIONS.get(session.ai_turn_number, "Deliver your best bars.")
 
-            # Calculate buildup/heat split (75% buildup, 25% heat)
-            buildup_bars = int(session.bars_per_turn * 0.75)
-            buildup_end_beat = buildup_bars * 4
-            heat_start_beat = buildup_end_beat + 1
+            quarter = max(1, session.bars_per_turn // 4)
+            seconds_per_bar = 4 * (60.0 / session.bpm)
 
             lyricist_input = {
                 "opponent_bars": session.transcription,
                 "bpm": session.bpm,
                 "bars": session.bars_per_turn,
                 "seconds": session.seconds,
-                "grid_beats": session.grid_beats,
-                "grid_beats_minus_1": session.grid_beats - 1,
-                "buildup_end_beat": buildup_end_beat,
-                "heat_start_beat": heat_start_beat,
-                "heat_start_beat_plus_1": heat_start_beat + 1,
-                "heat_start_beat_plus_2": heat_start_beat + 2,
-                "heat_start_beat_plus_3": heat_start_beat + 3,
+                "seconds_per_bar": seconds_per_bar,
+                "s1_end": quarter,
+                "s2_start": quarter + 1,
+                "s2_end": quarter * 2,
+                "s3_start": quarter * 2 + 1,
+                "s3_end": quarter * 3,
+                "s4_start": quarter * 3 + 1,
                 "turn_number": session.current_turn,
                 "total_turns": session.total_turns,
                 "battle_context": battle_context,
@@ -199,18 +197,18 @@ class PipelineService:
             }
 
             session.lyricist_output = self.lyricist_chain.invoke(lyricist_input)
-            validate_lyricist_output(session.lyricist_output, session.grid_beats)
+            validate_lyricist_output(session.lyricist_output, session.bars_per_turn)
 
             lyricist_duration = time.time() - lyricist_start
             session.timing['lyricist_seconds'] = round(lyricist_duration, 2)
             print(f"⏱️  Lyricist completed in {lyricist_duration:.2f}s")
 
             # Log Lyricist output
-            print("\n=== LYRICIST OUTPUT (Beat-by-Beat Lyrics) ===")
+            print("\n=== LYRICIST OUTPUT (Bars) ===")
             print(json.dumps(session.lyricist_output.model_dump(), indent=2))
-            print("=============================================\n")
+            print("==============================\n")
 
-            # Build grid (Python - instant)
+            # Build TTS prompt (Python - instant)
             grid_builder_start = time.time()
             session.grid_builder_output = build_grid_from_lyrics(
                 session.lyricist_output, session.bpm, session.seconds
@@ -219,12 +217,7 @@ class PipelineService:
 
             grid_builder_duration = time.time() - grid_builder_start
             session.timing['grid_builder_seconds'] = round(grid_builder_duration, 4)
-            print(f"⏱️  Grid Builder completed in {grid_builder_duration:.4f}s")
-
-            # Log Grid Builder output
-            print("\n=== GRID BUILDER OUTPUT (Performance Grid) ===")
-            print(json.dumps(session.grid_builder_output.model_dump(), indent=2))
-            print("===============================================\n")
+            print(f"⏱️  TTS prompt built in {grid_builder_duration:.4f}s")
 
             # Step 3: Generate audio
             session.step = PipelineStep.GENERATING_AUDIO

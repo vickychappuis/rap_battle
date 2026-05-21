@@ -55,7 +55,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import models
-from models import LyricistOutput, PerformanceBeat, GridBuilderOutput
+from models import LyricistOutput, GridBuilderOutput
 
 # Import prompts from prompts module
 from prompts import LYRICIST_PROMPT_TEMPLATE
@@ -75,41 +75,28 @@ ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/music/detailed"
 # VALIDATION UTILITIES
 # ============================================================================
 
-def count_words(text: str) -> int:
-    """Count words in text"""
-    return len(text.split())
+def validate_lyricist_output(output: LyricistOutput, expected_bars: int) -> None:
+    """Validate and fix Lyricist output to match expected bar count.
 
-
-def validate_lyricist_output(output: LyricistOutput, expected_beats: int) -> None:
-    """Validate and fix Lyricist output to match constraints.
-
-    Lenient validation: truncates or pads beats if off by a small amount.
+    Lenient validation: truncates or pads bars if off by a small amount.
     """
-    actual_beats = len(output.beats)
+    actual_bars = len(output.bars)
 
-    # Allow some tolerance and fix
-    if actual_beats > expected_beats:
-        # Truncate extra beats
-        print(f"⚠ Got {actual_beats} beats, truncating to {expected_beats}")
-        output.beats = output.beats[:expected_beats]
-        output.grid_beats = expected_beats
-    elif actual_beats < expected_beats:
-        # Pad with held words from last beat
-        diff = expected_beats - actual_beats
-        if diff <= 4:  # Only pad up to 4 beats
-            print(f"⚠ Got {actual_beats} beats, padding {diff} to reach {expected_beats}")
-            last_word = output.beats[-1] if output.beats else "yeah"
-            output.beats.extend([last_word] * diff)
-            output.grid_beats = expected_beats
+    if actual_bars > expected_bars:
+        print(f"⚠ Got {actual_bars} bars, truncating to {expected_bars}")
+        output.bars = output.bars[:expected_bars]
+    elif actual_bars < expected_bars:
+        diff = expected_bars - actual_bars
+        if diff <= 2:
+            print(f"⚠ Got {actual_bars} bars, padding {diff} to reach {expected_bars}")
+            output.bars.extend(["yeah..."] * diff)
         else:
             raise ValueError(
-                f"Expected {expected_beats} beats, got {actual_beats} (too few to pad)"
+                f"Expected {expected_bars} bars, got {actual_bars} (too few to pad)"
             )
 
-    # Count total words
-    total_words = sum(len(beat.split()) for beat in output.beats)
-
-    print(f"✓ Validation passed: {expected_beats} beats, {total_words} total words")
+    total_words = sum(len(bar.split()) for bar in output.bars)
+    print(f"✓ Validation passed: {actual_bars} bars, {total_words} total words")
 
 
 # ============================================================================
@@ -292,10 +279,8 @@ class RapBattleOrchestrator:
         print(f"\n=== TIMING CALCULATIONS ===")
         print(f"BPM: {self.bpm}")
         print(f"Seconds: {self.seconds}")
-        print(f"Total beats (exact): {total_beats_exact:.2f}")
-        print(f"Grid beats: {self.grid_beats}")
-        print(f"Target: 1-3 words per beat (aim for ~2)")
-        print(f"Final beat: 1 held word")
+        print(f"Total beats: {self.grid_beats}")
+        print(f"Total bars: {self.grid_beats // 4}")
         print(f"===========================\n")
 
     def run(self):
@@ -318,27 +303,25 @@ class RapBattleOrchestrator:
             print("==========================================\n")
 
             # Step 1: Invoke the Lyricist
-            print("📝 Lyricist: Generating beat-by-beat lyrics...")
+            print("📝 Lyricist: Generating bars...")
             lyricist_start = time.time()
 
-            # Calculate buildup/heat split (75% buildup, 25% heat)
-            bars = int(self.bpm * self.seconds / 60) // 4
-            buildup_bars = int(bars * 0.75)
-            buildup_end_beat = buildup_bars * 4
-            heat_start_beat = buildup_end_beat + 1
+            bars = self.grid_beats // 4
+            quarter = max(1, bars // 4)
+            seconds_per_bar = 4 * (60.0 / self.bpm)
 
             lyricist_input = {
                 "opponent_bars": self.opponent_bars,
                 "bpm": self.bpm,
                 "bars": bars,
                 "seconds": self.seconds,
-                "grid_beats": self.grid_beats,
-                "grid_beats_minus_1": self.grid_beats - 1,
-                "buildup_end_beat": buildup_end_beat,
-                "heat_start_beat": heat_start_beat,
-                "heat_start_beat_plus_1": heat_start_beat + 1,
-                "heat_start_beat_plus_2": heat_start_beat + 2,
-                "heat_start_beat_plus_3": heat_start_beat + 3,
+                "seconds_per_bar": seconds_per_bar,
+                "s1_end": quarter,
+                "s2_start": quarter + 1,
+                "s2_end": quarter * 2,
+                "s3_start": quarter * 2 + 1,
+                "s3_end": quarter * 3,
+                "s4_start": quarter * 3 + 1,
                 "format_instructions": self.lyricist_parser.get_format_instructions()
             }
 
@@ -346,17 +329,17 @@ class RapBattleOrchestrator:
             lyricist_duration = time.time() - lyricist_start
 
             print(f"✓ Lyricist complete in {lyricist_duration:.2f}s\n")
-            print("=== LYRICIST OUTPUT (Beat-by-Beat Lyrics) ===")
+            print("=== LYRICIST OUTPUT (Bars) ===")
             print(json.dumps(lyricist_output.model_dump(), indent=2))
-            print("=============================================\n")
+            print("==============================\n")
 
             # Step 2: Validate Lyricist output
             print("🔍 Validating Lyricist output...")
-            validate_lyricist_output(lyricist_output, self.grid_beats)
+            validate_lyricist_output(lyricist_output, bars)
             print()
 
-            # Step 3: Build Grid (Python - instant)
-            print("🎵 Grid Builder: Building performance grid (Python)...")
+            # Step 3: Build TTS prompt
+            print("🎵 Building TTS prompt...")
             grid_builder_start = time.time()
 
             grid_builder_output = build_grid_from_lyrics(
@@ -364,10 +347,7 @@ class RapBattleOrchestrator:
             )
             grid_builder_duration = time.time() - grid_builder_start
 
-            print(f"✓ Grid Builder complete in {grid_builder_duration:.4f}s\n")
-            print("=== GRID BUILDER OUTPUT (Performance Grid) ===")
-            print(json.dumps(grid_builder_output.model_dump(), indent=2))
-            print("===============================================\n")
+            print(f"✓ TTS prompt built in {grid_builder_duration:.4f}s\n")
 
             # Step 4: Display final TTS prompt
             print("=== FINAL TTS PROMPT ===")
