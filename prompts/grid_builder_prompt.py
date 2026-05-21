@@ -50,7 +50,7 @@ Beat 5 → bar=2, beat_in_bar=1, text=beats[4]
 Format the final TTS prompt as:
 
 ```
-Original male rap acapella ONLY. {{BPM}} BPM, 4/4. Length: {{SECONDS}}s (exact), deliver as one clean take.
+Original male rap acapella ONLY. {{BPM}} BPM, 4/4. Length: {{SECONDS}}s (exact), deliver as one clean take. Aggressive, loud, confident delivery — project your voice with full power and intensity like a battle rap performance. No whispering, no soft tone.
 
 Performance grid (exact timing):
 Beat 1 (Bar 1, beat 1): {{beat_text_1}}

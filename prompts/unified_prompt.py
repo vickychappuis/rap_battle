@@ -72,7 +72,7 @@ For each beat number `i` from 1..{grid_beats}:
 4) **Create `tts_prompt`**
 Use this exact structure (fill in values):
 ```
-Original male rap acapella ONLY. {bpm} BPM, 4/4. Length: {seconds}s (exact), deliver as one clean take.
+Original male rap acapella ONLY. {bpm} BPM, 4/4. Length: {seconds}s (exact), deliver as one clean take. Aggressive, loud, confident delivery — project your voice with full power and intensity like a battle rap performance. No whispering, no soft tone.
 
 Performance grid (exact timing):
 Beat 1 (Bar 1, beat 1): <beat_text_1>
