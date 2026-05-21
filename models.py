@@ -20,6 +20,8 @@ class LyricistOutput(BaseModel):
         # Don't strictly validate beat count here - we'll fix it in validate_lyricist_output
         # Just check each beat has reasonable content
         for i, beat in enumerate(v):
+            if beat == "...":
+                continue  # Pause beat, valid
             word_count = len(beat.split())
             # Allow 1-4 words per beat (flexible)
             if word_count < 1 or word_count > 4:

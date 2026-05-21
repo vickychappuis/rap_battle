@@ -145,10 +145,13 @@ def generate_music(tts_prompt: str, seconds: float, api_key: str) -> str:
         "Content-Type": "application/json"
     }
 
-    # Request body
+    # Request body — round up to next whole second to match the rounded TTS prompt
+    # and avoid fractional durations that the model may handle awkwardly
+    import math
+    rounded_ms = math.ceil(seconds) * 1000
     payload = {
         "prompt": tts_prompt,
-        "music_length_ms": int(seconds * 1000)
+        "music_length_ms": rounded_ms
     }
 
     print(f"🎵 Calling ElevenLabs API...")

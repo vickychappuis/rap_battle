@@ -45,22 +45,18 @@ def build_grid_from_lyrics(lyricist_output: LyricistOutput, bpm: int, seconds: f
             )
         )
 
-    # 3. Create plain_take
-    plain_take = " ".join(beats)
+    # 3. Create plain_take (strip pause beats so ElevenLabs only gets real words)
+    plain_take = " ".join(b for b in beats if b != "...")
 
     # 4. Create TTS prompt
-    grid_lines = []
-    for beat_item in performance_grid:
-        grid_lines.append(
-            f"Beat {beat_item.beat} (Bar {beat_item.bar}, beat {beat_item.beat_in_bar}): {beat_item.text}"
-        )
+    # Round seconds up to the next whole number to avoid ugly repeating decimals
+    # and give the model slight breathing room at the end
+    import math
+    rounded_seconds = math.ceil(seconds)
 
-    tts_prompt = f"""Original male rap acapella ONLY. {bpm} BPM, 4/4. Length: {seconds}s (exact), deliver as one clean take.
+    tts_prompt = f"""Original male rap acapella ONLY. {bpm} BPM, 4/4. Length: {rounded_seconds}s, deliver as one clean take. Keep tight rhythm on the beat.
 
-Performance grid (exact timing):
-{chr(10).join(grid_lines)}
-
-Clean take:
+Lyrics:
 {plain_take}"""
 
     return GridBuilderOutput(

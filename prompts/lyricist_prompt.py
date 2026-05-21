@@ -64,7 +64,7 @@ Your opponent just said:
 | **Bars** | {bars} |
 | **Grid beats** | {grid_beats} |
 | **Total seconds** | {seconds:.1f} |
-| **Target density** | ~2 words per beat (normal rap flow) |
+| **Target density** | ~1 word per beat (relaxed, on-beat flow) |
 | **Last beat** | 1 held word (for clean ending) |
 
 ## Task
@@ -73,19 +73,31 @@ Write **exactly {grid_beats} beat texts** that form a complete rap response.
 
 ### Beat-by-Beat Structure
 
-- **Beats 1 through {grid_beats_minus_1}:** Each beat gets **1-3 words** (aim for ~2)
+- **Most beats:** **1 word** (one strong word landing on the beat)
+- **Some beats:** **2 words** max (for flow and connectors)
+- **Breathing pauses:** Use `"..."` for ~4-6 beats total (spread across the verse). These create natural gaps — a real rapper breathes.
 - **Beat {grid_beats} (final):** Exactly **1 word** (held for impact)
 
 ### Examples of Good Beat Texts
 
 ```
-Beat 1: "You say"           (2 words)
-Beat 2: "you're pro but"    (3 words)
-Beat 3: "I'm the"           (2 words)
-Beat 4: "one winning"       (2 words)
+Beat 1: "Yeah"              (1 word — opener)
+Beat 2: "..."               (pause — let the beat breathe)
+Beat 3: "You"               (1 word)
+Beat 4: "talk"              (1 word)
+Beat 5: "big"               (1 word)
+Beat 6: "but"               (1 word)
+Beat 7: "I'm real"          (2 words)
+Beat 8: "..."               (pause — end of bar, breathe)
 ...
-Beat {grid_beats}: "truth"  (1 word, held)
+Beat {grid_beats}: "gone"   (1 word, held)
 ```
+
+### Pause Placement Guide
+- Place `"..."` at the **end of bars** (every 4th or 8th beat) for natural breathing
+- Also use a pause at the **start** (beat 1 or 2) for a dramatic entrance
+- Aim for **4-6 pauses** out of {grid_beats} total beats
+- Never put two pauses back-to-back
 
 ## Style Guide — Modern Freestyle
 
@@ -101,6 +113,7 @@ Write in a modern hip-hop freestyle style:
 **DO:**
 - Keep it natural, modern, and TTS-friendly
 - Prioritize authenticity and feeling over bars-for-bars-sake
+- Use simple, punchy words — fewer syllables hit harder on the beat
 
 ## Output Format
 
@@ -110,19 +123,24 @@ You must respond with **ONLY** valid JSON matching this structure (no extra text
 {{
   "grid_beats": {grid_beats},
   "beats": [
-    "You say",
-    "you're pro but",
-    "I'm the",
-    "one winning",
+    "Yeah",
+    "...",
+    "You",
+    "talk",
+    "big",
+    "but",
+    "I'm real",
+    "...",
     ...
-    "truth"
+    "gone"
   ]
 }}
 ```
 
 ### Critical Requirements
 - Array `beats` must have **exactly {grid_beats} elements**
-- Beats 1-{grid_beats_minus_1}: **1-3 words each**
+- Most beats: **1 word**, some beats: **2 words** max
+- Include **4-6 pause beats** using `"..."` (spread out, never consecutive)
 - Beat {grid_beats}: **exactly 1 word** (held)
 - Return **ONLY** the JSON object, no other text
 
