@@ -309,6 +309,7 @@ class RapBattleOrchestrator:
             bars = self.grid_beats // 4
             quarter = max(1, bars // 4)
             seconds_per_bar = 4 * (60.0 / self.bpm)
+            syllable_budget = self.grid_beats * 2  # ~2 syllables per beat avg
 
             lyricist_input = {
                 "opponent_bars": self.opponent_bars,
@@ -316,6 +317,7 @@ class RapBattleOrchestrator:
                 "bars": bars,
                 "seconds": self.seconds,
                 "seconds_per_bar": seconds_per_bar,
+                "syllable_budget": syllable_budget,
                 "s1_end": quarter,
                 "s2_start": quarter + 1,
                 "s2_end": quarter * 2,
