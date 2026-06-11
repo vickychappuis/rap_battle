@@ -28,7 +28,7 @@ export function LandingPage() {
 
         <button
           className="landing-cta"
-          onClick={() => navigate("/access")}
+          onClick={() => navigate("/battle")}
         >
           <img
             src="/torn_yellow_paper.png"
