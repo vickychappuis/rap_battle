@@ -27,14 +27,15 @@ in time with the beat.
 
 ```
 frontend/            React + TypeScript + Vite (Web Audio, mic recording)
-api/                 FastAPI app
+api/                 FastAPI web layer
   routes/session.py  Session + recording + status endpoints
   services/          Pipeline orchestration (background thread)
-generation.py        Lyricist agent + ElevenLabs music generation
-grid_builder_python.py  Deterministic beat-grid + prompt builder
-stt.py               Speech-to-text
-models.py            Pydantic models
-prompts/             Lyricist and judge prompt templates
+core/                Domain logic (framework-agnostic)
+  generation.py      Lyricist agent + ElevenLabs music generation
+  grid_builder.py    Deterministic beat-grid + prompt builder
+  stt.py             Speech-to-text
+  models.py          Pydantic schemas
+  prompts/           Lyricist and judge prompt templates
 assets/tracks/       Base instrumental
 ```
 

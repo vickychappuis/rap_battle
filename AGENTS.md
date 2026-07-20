@@ -38,7 +38,8 @@ using the Web Audio clock.
 
 ## Conventions
 
-- Keep agent logic modular and prompts easy to locate and edit (`prompts/`).
+- Keep agent logic modular and prompts easy to locate and edit
+  (`core/prompts/`). Domain logic lives in `core/`; `api/` is the web layer.
 - Prefer small, clear changes over large refactors (POC pace).
 - **Frontend:** follow `visual_style_guide.md`; don't add new design rules.
 - Keep frontend dependencies minimal.

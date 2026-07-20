@@ -14,19 +14,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from stt import transcribe_audio
-from prompts import (
+from core.stt import transcribe_audio
+from core.prompts import (
     TURN_INSTRUCTIONS,
     TurnData as PromptTurnData,
     build_battle_context,
 )
-from models import LyricistOutput, GridBuilderOutput
-from generation import (
+from core.models import LyricistOutput, GridBuilderOutput
+from core.generation import (
     create_lyricist_agent,
     validate_lyricist_output,
     generate_music,
 )
-from grid_builder_python import build_grid_from_lyrics
+from core.grid_builder import build_grid_from_lyrics
 from api.models.session import PipelineStep, TurnData
 
 
@@ -300,7 +300,7 @@ class PipelineService:
         from openai import OpenAI
         client = OpenAI(api_key=self.openai_api_key)
 
-        from prompts.judge_prompt import build_judge_system_prompt, build_judge_transcript
+        from core.prompts.judge_prompt import build_judge_system_prompt, build_judge_transcript
 
         opponent = session.opponent_name
         transcript = build_judge_transcript(session.turn_history, opponent)

@@ -16,8 +16,8 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 
-from models import LyricistOutput
-from prompts import LYRICIST_PROMPT_TEMPLATE
+from core.models import LyricistOutput
+from core.prompts import LYRICIST_PROMPT_TEMPLATE
 
 ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/music/detailed"
 

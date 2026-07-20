@@ -5,7 +5,7 @@ Assembles lyricist bars into a TTS prompt for ElevenLabs music generation.
 """
 
 import math
-from models import GridBuilderOutput, LyricistOutput
+from core.models import GridBuilderOutput, LyricistOutput
 
 
 def build_grid_from_lyrics(lyricist_output: LyricistOutput, bpm: int, seconds: float) -> GridBuilderOutput:
