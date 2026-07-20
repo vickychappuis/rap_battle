@@ -26,11 +26,3 @@ def build_judge_transcript(turn_history, opponent_name: str) -> str:
         else:
             lines.append(f"{opponent_name} verse: {turn.lyrics or '(no lyrics)'}")
     return "\n".join(lines)
-
-
-JUDGE_METADATA = {
-    "name": "Judge",
-    "description": "Judges a rap battle and picks a winner",
-    "temperature": 0.7,
-    "default_model": "gpt-4o-mini",
-}

@@ -1,38 +1,27 @@
-"""
-Pipeline service for async rap battle processing.
-
-Wraps the existing orchestrator logic to run in a background thread,
-updating session state at each step for frontend polling.
-"""
+"""Runs the rap battle pipeline in a background thread, updating session
+state at each step so the frontend can poll for progress."""
 
 import os
 import json
-import tempfile
+import shutil
 import threading
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 from dataclasses import dataclass, field
 
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
-
-# Import existing modules
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from stt import transcribe_audio
 from prompts import (
-    LYRICIST_PROMPT_TEMPLATE,
     TURN_INSTRUCTIONS,
     TurnData as PromptTurnData,
     build_battle_context,
 )
 from models import LyricistOutput, GridBuilderOutput
-from main import (
+from generation import (
     create_lyricist_agent,
     validate_lyricist_output,
     generate_music,
@@ -116,10 +105,9 @@ class PipelineService:
     def __init__(self):
         self.openai_api_key = os.environ.get("OPENAI_API_KEY")
         self.elevenlabs_api_key = os.environ.get("ELEVENLABS_API_KEY")
-        self.model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
-        # Create lyricist agent (Grid Builder is now pure Python)
-        self.lyricist_chain, self.lyricist_parser = create_lyricist_agent(self.model)
+        # Grid building is pure Python; only the lyricist needs an LLM.
+        self.lyricist_chain, self.lyricist_parser = create_lyricist_agent()
 
     def start_pipeline(self, session: SessionState, audio_path: str) -> None:
         """Start the pipeline in a background thread."""
@@ -131,7 +119,6 @@ class PipelineService:
     def _run_pipeline(self, session: SessionState) -> None:
         """Run the full pipeline (called in background thread)."""
         try:
-            # Initialize timing dict
             session.timing = {}
             pipeline_start = time.time()
 
@@ -143,7 +130,6 @@ class PipelineService:
             session.timing['transcription_seconds'] = round(transcribe_duration, 2)
             print(f"⏱️  Transcription completed in {transcribe_duration:.2f}s")
 
-            # Log transcription output
             print("\n=== OPPONENT BARS (STT Transcription) ===")
             print(session.transcription)
             print("==========================================\n")
@@ -242,18 +228,13 @@ class PipelineService:
             output_path = output_dir / output_filename
 
             if mock_mode and mock_response_path:
-                # Mock mode: copy existing file to output location
-                import shutil
                 shutil.copy(mock_response_path, output_path)
             else:
-                # Real API call
                 music_file_path = generate_music(
                     tts_prompt=session.grid_builder_output.tts_prompt,
                     seconds=session.seconds,
                     api_key=self.elevenlabs_api_key
                 )
-                # Move to static folder
-                import shutil
                 shutil.move(music_file_path, output_path)
 
             session.ai_audio_url = f"/static/generated/{output_filename}"

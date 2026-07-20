@@ -189,11 +189,3 @@ You must respond with **ONLY** valid JSON matching this structure (no extra text
 
 {format_instructions}
 """
-
-# Agent metadata
-LYRICIST_METADATA = {
-    "name": "Lyricist",
-    "description": "Generates battle rap bars with natural flow and emotion",
-    "temperature": 0.7,
-    "default_model": "gpt-4o-mini"
-}

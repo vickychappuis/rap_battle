@@ -1,0 +1,97 @@
+"""Lyric generation and audio synthesis helpers.
+
+Shared by the API pipeline:
+- Lyricist agent (LangChain + OpenAI) that writes timed battle bars
+- Output validation
+- ElevenLabs music generation
+"""
+
+import math
+import os
+from datetime import datetime
+from pathlib import Path
+
+import requests
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import PydanticOutputParser
+
+from models import LyricistOutput
+from prompts import LYRICIST_PROMPT_TEMPLATE
+
+ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/music/detailed"
+
+
+def create_lyricist_agent(model: str | None = None):
+    """Build the Lyricist chain and its output parser.
+
+    The model defaults to OPENAI_MODEL (or gpt-5-mini). The reasoning and
+    output_version settings assume a gpt-5-family reasoning model.
+    """
+    model = model or os.environ.get("OPENAI_MODEL", "gpt-5-mini")
+    parser = PydanticOutputParser(pydantic_object=LyricistOutput)
+    prompt = ChatPromptTemplate.from_template(LYRICIST_PROMPT_TEMPLATE)
+    llm = ChatOpenAI(
+        model=model,
+        reasoning={"effort": "low"},
+        output_version="responses/v1",
+        temperature=0.7,
+        model_kwargs={"response_format": {"type": "json_object"}},
+    )
+    chain = prompt | llm | parser
+    return chain, parser
+
+
+def validate_lyricist_output(output: LyricistOutput, expected_bars: int) -> None:
+    """Coerce the Lyricist output to the expected bar count.
+
+    Truncates extra bars and pads a small shortfall; raises if too few to pad.
+    """
+    actual_bars = len(output.bars)
+
+    if actual_bars > expected_bars:
+        print(f"⚠ Got {actual_bars} bars, truncating to {expected_bars}")
+        output.bars = output.bars[:expected_bars]
+    elif actual_bars < expected_bars:
+        diff = expected_bars - actual_bars
+        if diff <= 2:
+            print(f"⚠ Got {actual_bars} bars, padding {diff} to reach {expected_bars}")
+            output.bars.extend(["yeah..."] * diff)
+        else:
+            raise ValueError(
+                f"Expected {expected_bars} bars, got {actual_bars} (too few to pad)"
+            )
+
+    total_words = sum(len(bar.split()) for bar in output.bars)
+    print(f"✓ Validation passed: {actual_bars} bars, {total_words} total words")
+
+
+def generate_music(tts_prompt: str, seconds: float, api_key: str) -> str:
+    """Generate music via the ElevenLabs API and return the saved MP3 path."""
+    output_dir = Path("music_output")
+    output_dir.mkdir(exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = output_dir / f"rap_battle_{timestamp}.mp3"
+
+    headers = {"xi-api-key": api_key, "Content-Type": "application/json"}
+
+    # Round up to a whole second to match the rounded TTS prompt and avoid
+    # fractional durations the model may handle awkwardly.
+    payload = {"prompt": tts_prompt, "music_length_ms": math.ceil(seconds) * 1000}
+
+    print("🎵 Calling ElevenLabs API...")
+    print(f"   Duration: {seconds}s ({payload['music_length_ms']}ms)")
+
+    try:
+        response = requests.post(ELEVENLABS_API_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        with open(output_path, "wb") as f:
+            f.write(response.content)
+        print(f"✓ Music generated: {output_path}")
+        return str(output_path)
+    except requests.exceptions.RequestException as e:
+        error_msg = f"ElevenLabs API error: {e}"
+        if e.response is not None:
+            error_msg += f"\nResponse: {e.response.text}"
+        raise Exception(error_msg)

@@ -1,7 +1,5 @@
 /**
  * BeatTracker - Tracks current beat/bar position via elapsed time.
- *
- * Port of Python audio_player.py:33-82
  */
 
 export class BeatTracker {

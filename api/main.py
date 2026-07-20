@@ -12,19 +12,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
 from api.routes import session_router
 
-# Create FastAPI app
 app = FastAPI(
     title="Rap Battle API",
     description="Backend API for the rap battle frontend",
     version="0.1.0",
 )
 
-# Configure CORS
 _extra_origins = [
     o.strip()
     for o in os.environ.get("ALLOWED_ORIGINS", "").split(",")
@@ -43,20 +40,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
 app.include_router(session_router)
 
-# Static files setup
 api_dir = Path(__file__).parent
 project_root = api_dir.parent
 
-# Mount static directories
-# Generated audio files
+# Generated audio (created on demand); served back to the frontend.
 static_generated_dir = api_dir / "static" / "generated"
 static_generated_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/static/generated", StaticFiles(directory=str(static_generated_dir)), name="generated")
 
-# Base tracks (serve from assets)
+# Base instrumental tracks.
 tracks_dir = project_root / "assets" / "tracks"
 if tracks_dir.exists():
     app.mount("/static/tracks", StaticFiles(directory=str(tracks_dir)), name="tracks")
