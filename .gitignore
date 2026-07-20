@@ -29,9 +29,17 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Node
+node_modules/
+
+# Runtime-generated audio (recreated on demand)
+api/static/generated/
+music_output/
+
 # Test outputs and generated files
 *_results.json
 *_comparison*.json
 test_output/
 
 .gemini-clipboard/
+.claude/

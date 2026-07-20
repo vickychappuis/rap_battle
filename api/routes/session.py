@@ -87,7 +87,7 @@ async def create_session(body: SessionCreate = SessionCreate()):
         bars_per_turn=BARS_PER_TURN,
         turns_per_player=TURNS_PER_PLAYER,
         record_duration=record_duration,
-        base_track_url="/static/tracks/base_90bpm.wav",
+        base_track_url="/static/tracks/base_90bpm.mp3",
     )
 
 
