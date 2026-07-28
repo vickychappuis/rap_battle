@@ -1,5 +1,9 @@
 # Rap Battle AI
 
+[![CI](https://github.com/vickychappuis/rap_battle/actions/workflows/ci.yml/badge.svg)](https://github.com/vickychappuis/rap_battle/actions/workflows/ci.yml)
+
+**Live demo: [raparena.vickychappuis.dev](https://raparena.vickychappuis.dev)**
+
 Battle rap against an AI opponent in the browser. You spit bars into your mic;
 the app transcribes them, writes a timed comeback, turns it into an a cappella
 vocal, and drops it back over a looping beat — in time with the bar. After the
@@ -37,6 +41,7 @@ core/                Domain logic (framework-agnostic)
   models.py          Pydantic schemas
   prompts/           Lyricist and judge prompt templates
 assets/tracks/       Base instrumental
+tests/               Backend suite (external APIs stubbed)
 ```
 
 The frontend talks to the API under `/api` and loads audio from `/static`; in
@@ -56,10 +61,12 @@ docker compose up
 
 ### Without Docker
 
+Requires Python 3.12+ and Node 20+.
+
 Backend:
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt        # or requirements-dev.txt to run the tests
 uvicorn api.main:app --reload --port 8000
 ```
 
@@ -78,16 +85,68 @@ required; everything else has sensible defaults (see the comments in
 `.env.example`). Set `MOCK_ELEVENLABS=true` with a `MOCK_RESPONSE_PATH` to
 develop without spending ElevenLabs credits.
 
+Missing keys don't stop the server: it starts, logs which ones are absent, and
+`/health` still answers — battles just fail until you set them.
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+The suite drives real battles over the real HTTP API and the real background
+pipeline, stubbing only the three external boundaries (OpenAI transcription,
+the lyricist chain, ElevenLabs). It costs nothing to run and needs no API keys.
+
 ## API
 
 | Method | Path | Purpose |
 |--------|------|---------|
 | `POST` | `/api/session` | Start a battle, get config + base track URL |
 | `POST` | `/api/session/{id}/recording` | Upload a turn's audio, kick off the pipeline |
-| `POST` | `/api/session/{id}/retry` | Retry a failed turn |
+| `POST` | `/api/session/{id}/retry` | Resume a failed turn from the stage that failed |
 | `GET`  | `/api/session/{id}/status` | Poll pipeline state, lyrics, audio URL, result |
 | `GET`  | `/health` | Health check |
 
+Notable status codes: `413` if a recording exceeds `MAX_UPLOAD_MB`, `409` if a
+turn is already being processed for that session, `429` when the global rate
+limit trips.
+
+## Limits
+
+This is a POC and the guard rails are deliberately blunt:
+
+- Sessions live in memory, so a restart drops every battle in progress. They
+  are reclaimed after `SESSION_TTL_SECONDS` idle, along with their generated
+  audio.
+- The rate limit (4/hour, 15/day) is **global, not per-user** — it is a spend
+  cap on the API keys, not abuse protection. One client can exhaust it for
+  everyone.
+- There are no accounts and no authentication.
+- The user's transcribed bars are interpolated straight into the lyricist
+  prompt, and nothing moderates what either side says. It is a battle-rap toy,
+  not a system hardened against prompt injection or abusive content.
+
+## Deploying your own copy
+
+The demo runs the frontend on Vercel and the API on a container host, with the
+frontend proxying to the API so the browser only ever talks to one origin.
+
+If you fork this, **change the backend URL in `frontend/vercel.json`** — its
+`/api` and `/static` rewrites point at this project's own backend, and left as
+they are your deployment will send its traffic (and its bill) there. It will
+also share this deployment's global rate limit, so battles will fail for
+everyone once the daily cap trips.
+
+The API needs `OPENAI_API_KEY`, `ELEVENLABS_API_KEY`, and `ALLOWED_ORIGINS` set
+to your frontend's origin. `api/Dockerfile` builds it from the repo root.
+
 ## License
 
-MIT
+Code is MIT — see [LICENSE](LICENSE).
+
+The bundled assets are **not** covered by that grant: the base instrumental
+(`assets/tracks/`) and the artwork (`frontend/public/`) are used under licences
+held by the author and cannot be redistributed. Swap them for your own if you
+fork this.
