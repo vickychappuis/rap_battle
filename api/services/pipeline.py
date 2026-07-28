@@ -1,5 +1,12 @@
 """Runs the rap battle pipeline in a background thread, updating session
-state at each step so the frontend can poll for progress."""
+state at each step so the frontend can poll for progress.
+
+The pipeline is *resumable*: it is a list of stages, each of which knows how
+to tell whether it already produced its result for the current recording. A
+retry re-enters the same list and skips everything that already succeeded, so
+no external call (and no billed API call) is ever made twice for one
+recording, and the user's turn is committed to the history exactly once.
+"""
 
 import os
 import json
@@ -7,7 +14,7 @@ import shutil
 import threading
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 from dataclasses import dataclass, field
 
 from dotenv import load_dotenv
@@ -16,9 +23,10 @@ load_dotenv()
 
 from core.stt import transcribe_audio
 from core.prompts import (
-    TURN_INSTRUCTIONS,
     TurnData as PromptTurnData,
     build_battle_context,
+    build_opponent_persona_block,
+    build_turn_instructions,
 )
 from core.models import LyricistOutput, GridBuilderOutput
 from core.generation import (
@@ -30,6 +38,42 @@ from core.grid_builder import build_grid_from_lyrics
 from api.models.session import PipelineStep, TurnData
 
 
+# How long an idle session (and the mp3s it generated) is kept before the
+# next session creation sweeps it away. Sessions live in memory only, so
+# without this the process grows for its whole lifetime.
+# How many times a single turn may be retried before the player has to start
+# over. The frontend mirrors this as MAX_TURN_RETRIES in hooks/useSession.ts to
+# decide whether the mic offers "Retry" or "Start Over" — if the two ever
+# disagree, the UI stops offering the only working recovery path, so keep them
+# in step.
+MAX_TURN_RETRIES = 2
+
+SESSION_TTL_SECONDS = int(os.environ.get("SESSION_TTL_SECONDS", 3600))
+GENERATED_AUDIO_TTL_SECONDS = int(
+    os.environ.get("GENERATED_AUDIO_TTL_SECONDS", SESSION_TTL_SECONDS)
+)
+
+GENERATED_AUDIO_DIR = Path(__file__).parent.parent / "static" / "generated"
+
+
+def _content_logging_enabled() -> bool:
+    """Whether full transcriptions / lyrics may be printed.
+
+    Off by default: AGENTS.md forbids logging raw user content. Set
+    DEBUG_LOG_CONTENT=true locally when debugging prompt quality.
+    """
+    return os.environ.get("DEBUG_LOG_CONTENT", "").lower() in ("true", "1", "yes")
+
+
+def _log_content(title: str, body: str) -> None:
+    """Print sensitive content only when the debug flag is on."""
+    if not _content_logging_enabled():
+        return
+    print(f"\n=== {title} ===")
+    print(body)
+    print("=" * (len(title) + 8) + "\n")
+
+
 @dataclass
 class SessionState:
     """In-memory state for a battle session."""
@@ -38,6 +82,10 @@ class SessionState:
     bars_per_turn: int
     turns_per_player: int
     opponent_name: str = "the challenger"
+    # Client-supplied character sheet for the AI MC (name / age / claims /
+    # reality / extra_info), already validated and sanitised by the route's
+    # `OpponentPersona` model. None means "no persona for this battle".
+    opponent_persona: Optional[dict] = None
 
     # Derived values (calculated in __post_init__)
     grid_beats: int = field(init=False)
@@ -65,6 +113,16 @@ class SessionState:
     lyricist_output: Optional[LyricistOutput] = None
     grid_builder_output: Optional[GridBuilderOutput] = None
 
+    # Stage bookkeeping for the current recording. These make the pipeline
+    # resumable: a retry skips whatever is already recorded as done.
+    user_turn_committed: bool = False
+    ai_turn_committed: bool = False
+
+    # Reclamation + concurrency
+    last_activity: float = field(default_factory=time.time)
+    running: bool = False
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+
     def __post_init__(self):
         self.grid_beats = self.bars_per_turn * 4
         self.seconds = self.grid_beats * (60 / self.bpm)
@@ -84,8 +142,33 @@ class SessionState:
         """Which AI turn is this? (1-indexed)"""
         return (self.current_turn + 1) // 2
 
+    def touch(self) -> None:
+        """Mark the session as recently used so the TTL sweep spares it."""
+        self.last_activity = time.time()
+
+    def try_acquire_run(self) -> bool:
+        """Claim the single pipeline slot for this session.
+
+        Returns False if a pipeline thread is already running, which is what
+        stops a double-clicked /retry from spawning two threads that mutate
+        the same session.
+        """
+        with self._lock:
+            if self.running:
+                return False
+            self.running = True
+            return True
+
+    def release_run(self) -> None:
+        with self._lock:
+            self.running = False
+
     def clear_current_turn_data(self):
-        """Clear data from the current turn for a fresh start."""
+        """Clear data from the current turn for a fresh start.
+
+        Called when a NEW recording arrives - it throws away the resumable
+        stage results of the previous recording. A retry must never call it.
+        """
         self.transcription = None
         self.lyrics = None
         self.ai_audio_url = None
@@ -93,207 +176,427 @@ class SessionState:
         self.timing = None
         self.lyricist_output = None
         self.grid_builder_output = None
+        self.user_turn_committed = False
+        self.ai_turn_committed = False
+
+
+@dataclass
+class _Stage:
+    """One resumable unit of pipeline work.
+
+    `is_done` is checked before running: it reports whether this stage already
+    produced its result for the recording currently being processed.
+    """
+    name: str
+    step: PipelineStep
+    is_done: Callable[[SessionState], bool]
+    run: Callable[[SessionState], None]
+    timing_key: Optional[str] = None
+    timing_precision: int = 2
 
 
 # Global session storage (in-memory for POC)
 sessions: Dict[str, SessionState] = {}
 
 
+def cleanup_expired(now: Optional[float] = None) -> dict:
+    """Drop stale sessions and generated mp3s (TTL-based, swept on demand).
+
+    Called when a new session is created - no scheduler, no new dependency.
+    Returns a small summary, mostly so tests can assert on it.
+    """
+    now = now if now is not None else time.time()
+
+    expired = [
+        sid
+        for sid, s in list(sessions.items())  # snapshot: other requests may add
+        if not s.running and now - s.last_activity > SESSION_TTL_SECONDS
+    ]
+    for sid in expired:
+        session = sessions.pop(sid, None)
+        if session is not None and session.audio_path:
+            Path(session.audio_path).unlink(missing_ok=True)
+
+    removed_files = 0
+    if GENERATED_AUDIO_DIR.exists():
+        for path in GENERATED_AUDIO_DIR.glob("*.mp3"):
+            try:
+                if now - path.stat().st_mtime > GENERATED_AUDIO_TTL_SECONDS:
+                    path.unlink()
+                    removed_files += 1
+            except OSError:
+                pass
+
+    if expired or removed_files:
+        print(
+            f"🧹 Cleanup: removed {len(expired)} expired session(s) "
+            f"and {removed_files} generated file(s)"
+        )
+    return {"sessions_removed": len(expired), "files_removed": removed_files}
+
+
 class PipelineService:
     """Service to run the rap battle pipeline in a background thread."""
 
     def __init__(self):
-        self.openai_api_key = os.environ.get("OPENAI_API_KEY")
-        self.elevenlabs_api_key = os.environ.get("ELEVENLABS_API_KEY")
+        # The LLM client is built lazily (see `lyricist_chain`) so importing
+        # the app never requires an API key - /health must answer even when
+        # the environment is misconfigured.
+        self._lyricist_chain = None
+        self._lyricist_parser = None
+        self._llm_lock = threading.Lock()
 
-        # Grid building is pure Python; only the lyricist needs an LLM.
-        self.lyricist_chain, self.lyricist_parser = create_lyricist_agent()
+    # --- Lazily built external clients ------------------------------------
 
-    def start_pipeline(self, session: SessionState, audio_path: str) -> None:
-        """Start the pipeline in a background thread."""
+    @property
+    def openai_api_key(self) -> Optional[str]:
+        return os.environ.get("OPENAI_API_KEY")
+
+    @property
+    def elevenlabs_api_key(self) -> Optional[str]:
+        return os.environ.get("ELEVENLABS_API_KEY")
+
+    def _ensure_lyricist(self) -> None:
+        """Build the lyricist chain on first use, with a readable failure."""
+        if self._lyricist_chain is not None and self._lyricist_parser is not None:
+            return
+        with self._llm_lock:
+            if self._lyricist_chain is not None and self._lyricist_parser is not None:
+                return
+            if not self.openai_api_key:
+                raise RuntimeError(
+                    "OPENAI_API_KEY is not set - the lyricist cannot run. "
+                    "Set it in your environment or .env file (see .env.example)."
+                )
+            # Grid building is pure Python; only the lyricist needs an LLM.
+            chain, parser = create_lyricist_agent()
+            self._lyricist_chain = chain
+            self._lyricist_parser = parser
+
+    @property
+    def lyricist_chain(self):
+        self._ensure_lyricist()
+        return self._lyricist_chain
+
+    @lyricist_chain.setter
+    def lyricist_chain(self, value):
+        self._lyricist_chain = value
+
+    @property
+    def lyricist_parser(self):
+        self._ensure_lyricist()
+        return self._lyricist_parser
+
+    @lyricist_parser.setter
+    def lyricist_parser(self, value):
+        self._lyricist_parser = value
+
+    # --- Entry points ------------------------------------------------------
+
+    def start_pipeline(self, session: SessionState, audio_path: str) -> bool:
+        """Start a fresh turn from a newly uploaded recording.
+
+        Returns False if a pipeline run is already in flight for this session.
+        """
+        if not session.try_acquire_run():
+            return False
+        session.clear_current_turn_data()
         session.audio_path = audio_path
+        # Set synchronously so the next request sees a busy session even
+        # before the background thread gets scheduled.
+        session.step = PipelineStep.RECORDING
+        session.touch()
+        self._launch(session)
+        return True
+
+    def resume_pipeline(self, session: SessionState) -> bool:
+        """Re-enter the pipeline after an error, keeping finished stages.
+
+        Returns False if a pipeline run is already in flight for this session.
+        """
+        if not session.try_acquire_run():
+            return False
+        session.touch()
+        # Move off ERROR synchronously so a poll right after /retry sees the
+        # stage we are resuming into rather than the stale error state.
+        for stage in self._build_stages():
+            if not stage.is_done(session):
+                session.step = stage.step
+                break
+        self._launch(session)
+        return True
+
+    def _launch(self, session: SessionState) -> None:
         thread = threading.Thread(target=self._run_pipeline, args=(session,))
         thread.daemon = True
         thread.start()
 
+    # --- Stages ------------------------------------------------------------
+
+    def _build_stages(self) -> List[_Stage]:
+        return [
+            _Stage(
+                name="Transcription",
+                step=PipelineStep.TRANSCRIBING,
+                is_done=lambda s: s.transcription is not None,
+                run=self._stage_transcribe,
+                timing_key="transcription_seconds",
+            ),
+            _Stage(
+                name="User turn",
+                step=PipelineStep.TRANSCRIBING,
+                is_done=lambda s: s.user_turn_committed,
+                run=self._stage_commit_user_turn,
+            ),
+            _Stage(
+                name="Lyricist",
+                step=PipelineStep.GENERATING_LYRICS,
+                is_done=lambda s: s.lyricist_output is not None,
+                run=self._stage_lyricist,
+                timing_key="lyricist_seconds",
+            ),
+            _Stage(
+                name="Grid builder",
+                step=PipelineStep.GENERATING_LYRICS,
+                is_done=lambda s: s.grid_builder_output is not None,
+                run=self._stage_grid_builder,
+                timing_key="grid_builder_seconds",
+                timing_precision=4,
+            ),
+            _Stage(
+                name="Audio generation",
+                step=PipelineStep.GENERATING_AUDIO,
+                is_done=lambda s: s.ai_audio_url is not None,
+                run=self._stage_generate_audio,
+                timing_key="audio_generation_seconds",
+            ),
+            _Stage(
+                name="AI turn",
+                step=PipelineStep.GENERATING_AUDIO,
+                is_done=lambda s: s.ai_turn_committed,
+                run=self._stage_commit_ai_turn,
+            ),
+        ]
+
     def _run_pipeline(self, session: SessionState) -> None:
-        """Run the full pipeline (called in background thread)."""
+        """Run (or resume) the pipeline (called in background thread)."""
+        final_step = PipelineStep.ERROR
         try:
-            session.timing = {}
-            pipeline_start = time.time()
+            if session.timing is None:
+                session.timing = {}
 
-            # Step 1: Transcribe audio
-            session.step = PipelineStep.TRANSCRIBING
-            transcribe_start = time.time()
-            session.transcription = transcribe_audio(session.audio_path)
-            transcribe_duration = time.time() - transcribe_start
-            session.timing['transcription_seconds'] = round(transcribe_duration, 2)
-            print(f"⏱️  Transcription completed in {transcribe_duration:.2f}s")
+            for stage in self._build_stages():
+                if stage.is_done(session):
+                    print(f"⏭️  {stage.name}: already done for this recording, skipping")
+                    continue
+                session.step = stage.step
+                started = time.time()
+                stage.run(session)
+                elapsed = time.time() - started
+                if stage.timing_key:
+                    session.timing[stage.timing_key] = round(
+                        elapsed, stage.timing_precision
+                    )
+                    print(f"⏱️  {stage.name} completed in {elapsed:.2f}s")
 
-            print("\n=== OPPONENT BARS (STT Transcription) ===")
-            print(session.transcription)
-            print("==========================================\n")
+            final_step = self._finish_turn(session)
 
-            # Save user turn to history
-            user_turn = TurnData(
+        except Exception as e:
+            session.retry_count += 1
+            final_step = PipelineStep.ERROR
+            if session.retry_count >= MAX_TURN_RETRIES:
+                session.error = f"Failed after {MAX_TURN_RETRIES} attempts: {str(e)}"
+                # Out of retries: nothing left to resume, drop the recording.
+                self._cleanup_audio(session)
+            else:
+                session.error = f"Attempt {session.retry_count} failed: {str(e)}. You can retry."
+                # Completed stages stay on the session so a retry can resume.
+        finally:
+            session.touch()
+            # Free the run slot *before* advertising a terminal step, so a
+            # client that reacts to `awaiting_user`/`error` immediately can
+            # never be turned away by a slot this run has not released yet.
+            session.release_run()
+            session.step = final_step
+
+    def _stage_transcribe(self, session: SessionState) -> None:
+        session.transcription = transcribe_audio(session.audio_path)
+        _log_content("OPPONENT BARS (STT Transcription)", session.transcription)
+
+    def _stage_commit_user_turn(self, session: SessionState) -> None:
+        """Append the user's verse to the history exactly once."""
+        session.turn_history.append(
+            TurnData(
                 turn_number=session.current_turn,
                 player="user",
-                transcription=session.transcription
+                transcription=session.transcription,
             )
-            session.turn_history.append(user_turn)
-            session.current_turn += 1
+        )
+        session.current_turn += 1
+        session.user_turn_committed = True
+        # The recording has been turned into text; it is no longer needed,
+        # and a retry resumes from the transcript instead of the audio.
+        self._cleanup_audio(session)
 
-            # Step 2: Generate lyrics with battle context
-            session.step = PipelineStep.GENERATING_LYRICS
-            lyricist_start = time.time()
-
-            # Convert TurnData (Pydantic) to PromptTurnData (dataclass) for build_battle_context
-            prompt_history = [
-                PromptTurnData(
-                    turn_number=t.turn_number,
-                    player=t.player,
-                    transcription=t.transcription,
-                    lyrics=t.lyrics
-                )
-                for t in session.turn_history[:-1]  # Exclude current user turn
-            ]
-            battle_context = build_battle_context(prompt_history)
-            turn_instructions = TURN_INSTRUCTIONS.get(session.ai_turn_number, "Deliver your best bars.")
-
-            quarter = max(1, session.bars_per_turn // 4)
-            seconds_per_bar = 4 * (60.0 / session.bpm)
-            syllable_budget = session.grid_beats * 2  # ~2 syllables per beat avg
-
-            lyricist_input = {
-                "opponent_bars": session.transcription,
-                "bpm": session.bpm,
-                "bars": session.bars_per_turn,
-                "seconds": session.seconds,
-                "seconds_per_bar": seconds_per_bar,
-                "syllable_budget": syllable_budget,
-                "s1_end": quarter,
-                "s2_start": quarter + 1,
-                "s2_end": quarter * 2,
-                "s3_start": quarter * 2 + 1,
-                "s3_end": quarter * 3,
-                "s4_start": quarter * 3 + 1,
-                "turn_number": session.current_turn,
-                "total_turns": session.total_turns,
-                "battle_context": battle_context,
-                "turn_instructions": turn_instructions,
-                "format_instructions": self.lyricist_parser.get_format_instructions()
-            }
-
-            session.lyricist_output = self.lyricist_chain.invoke(lyricist_input)
-            validate_lyricist_output(session.lyricist_output, session.bars_per_turn)
-
-            lyricist_duration = time.time() - lyricist_start
-            session.timing['lyricist_seconds'] = round(lyricist_duration, 2)
-            print(f"⏱️  Lyricist completed in {lyricist_duration:.2f}s")
-
-            # Log Lyricist output
-            print("\n=== LYRICIST OUTPUT (Bars) ===")
-            print(json.dumps(session.lyricist_output.model_dump(), indent=2))
-            print("==============================\n")
-
-            # Build TTS prompt (Python - instant)
-            grid_builder_start = time.time()
-            session.grid_builder_output = build_grid_from_lyrics(
-                session.lyricist_output, session.bpm, session.seconds
+    def _stage_lyricist(self, session: SessionState) -> None:
+        # Convert TurnData (Pydantic) to PromptTurnData (dataclass) for build_battle_context
+        prompt_history = [
+            PromptTurnData(
+                turn_number=t.turn_number,
+                player=t.player,
+                transcription=t.transcription,
+                lyrics=t.lyrics
             )
-            session.lyrics = session.grid_builder_output.plain_take
+            for t in session.turn_history[:-1]  # Exclude current user turn
+        ]
+        battle_context = build_battle_context(prompt_history)
+        # Scales with TURNS_PER_PLAYER: opening / middle / final-round text.
+        turn_instructions = build_turn_instructions(
+            session.ai_turn_number, session.turns_per_player
+        )
 
-            grid_builder_duration = time.time() - grid_builder_start
-            session.timing['grid_builder_seconds'] = round(grid_builder_duration, 4)
-            print(f"⏱️  TTS prompt built in {grid_builder_duration:.4f}s")
+        quarter = max(1, session.bars_per_turn // 4)
+        seconds_per_bar = 4 * (60.0 / session.bpm)
+        syllable_budget = session.grid_beats * 2  # ~2 syllables per beat avg
 
-            # Step 3: Generate audio
-            session.step = PipelineStep.GENERATING_AUDIO
-            audio_start = time.time()
+        lyricist_input = {
+            "opponent_bars": session.transcription,
+            "bpm": session.bpm,
+            "bars": session.bars_per_turn,
+            "seconds": session.seconds,
+            "seconds_per_bar": seconds_per_bar,
+            "syllable_budget": syllable_budget,
+            "s1_end": quarter,
+            "s2_start": quarter + 1,
+            "s2_end": quarter * 2,
+            "s3_start": quarter * 2 + 1,
+            "s3_end": quarter * 3,
+            "s4_start": quarter * 3 + 1,
+            "turn_number": session.current_turn,
+            "total_turns": session.total_turns,
+            "battle_context": battle_context,
+            "turn_instructions": turn_instructions,
+            "opponent_persona": build_opponent_persona_block(session.opponent_persona),
+            "format_instructions": self.lyricist_parser.get_format_instructions()
+        }
 
-            print("=== FINAL TTS PROMPT ===")
-            print(session.grid_builder_output.tts_prompt)
-            print("========================\n")
+        output = self.lyricist_chain.invoke(lyricist_input)
+        validate_lyricist_output(output, session.bars_per_turn)
+        session.lyricist_output = output
 
-            # Ensure output directory exists
-            output_dir = Path(__file__).parent.parent / "static" / "generated"
-            output_dir.mkdir(parents=True, exist_ok=True)
+        _log_content(
+            "LYRICIST OUTPUT (Bars)",
+            json.dumps(session.lyricist_output.model_dump(), indent=2),
+        )
 
-            # Check for mock mode
-            mock_mode = os.environ.get("MOCK_ELEVENLABS", "").lower() in ("true", "1", "yes")
+    def _stage_grid_builder(self, session: SessionState) -> None:
+        """Build the TTS prompt (pure Python - instant)."""
+        session.grid_builder_output = build_grid_from_lyrics(
+            session.lyricist_output, session.bpm, session.seconds
+        )
+        session.lyrics = session.grid_builder_output.plain_take
+        _log_content("FINAL TTS PROMPT", session.grid_builder_output.tts_prompt)
+
+    def _stage_generate_audio(self, session: SessionState) -> None:
+        GENERATED_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+
+        # Generate unique filename for this turn
+        output_filename = f"{session.session_id}_turn{session.current_turn}.mp3"
+        output_path = GENERATED_AUDIO_DIR / output_filename
+
+        mock_mode = os.environ.get("MOCK_ELEVENLABS", "").lower() in ("true", "1", "yes")
+        if mock_mode:
+            # Fail loudly: silently falling through to the real API here would
+            # bill a call the operator explicitly asked us not to make.
             mock_response_path = os.environ.get("MOCK_RESPONSE_PATH", "")
-
-            # Generate unique filename for this turn
-            output_filename = f"{session.session_id}_turn{session.current_turn}.mp3"
-            output_path = output_dir / output_filename
-
-            if mock_mode and mock_response_path:
-                shutil.copy(mock_response_path, output_path)
-            else:
-                music_file_path = generate_music(
-                    tts_prompt=session.grid_builder_output.tts_prompt,
-                    seconds=session.seconds,
-                    api_key=self.elevenlabs_api_key
+            if not mock_response_path:
+                raise RuntimeError(
+                    "MOCK_ELEVENLABS is enabled but MOCK_RESPONSE_PATH is not set. "
+                    "Point it at an existing mp3 to use as the AI response."
                 )
-                shutil.move(music_file_path, output_path)
+            if not Path(mock_response_path).is_file():
+                raise RuntimeError(
+                    f"MOCK_RESPONSE_PATH does not exist: {mock_response_path}"
+                )
+            shutil.copy(mock_response_path, output_path)
+        else:
+            # Write straight to the per-turn destination: the legacy default
+            # path is a shared, second-resolution filename that concurrent
+            # battles collide on.
+            generate_music(
+                tts_prompt=session.grid_builder_output.tts_prompt,
+                seconds=session.seconds,
+                api_key=self.elevenlabs_api_key,
+                output_path=output_path,
+            )
 
-            session.ai_audio_url = f"/static/generated/{output_filename}"
+        session.ai_audio_url = f"/static/generated/{output_filename}"
 
-            audio_duration = time.time() - audio_start
-            session.timing['audio_generation_seconds'] = round(audio_duration, 2)
-            print(f"⏱️  Audio generation completed in {audio_duration:.2f}s")
-
-            # Calculate total timing
-            total_duration = time.time() - pipeline_start
-            session.timing['total_seconds'] = round(total_duration, 2)
-
-            # Log timing summary
-            print("\n" + "=" * 70)
-            print(f"⏱️  TIMING SUMMARY (Turn {session.current_turn})")
-            print("=" * 70)
-            print(f"Transcription:     {session.timing['transcription_seconds']:>6.2f}s  ({session.timing['transcription_seconds']/total_duration*100:>5.1f}%)")
-            print(f"Lyricist:          {session.timing['lyricist_seconds']:>6.2f}s  ({session.timing['lyricist_seconds']/total_duration*100:>5.1f}%)")
-            print(f"Grid Builder:      {session.timing['grid_builder_seconds']:>6.2f}s  ({session.timing['grid_builder_seconds']/total_duration*100:>5.1f}%)")
-            print(f"Audio Generation:  {session.timing['audio_generation_seconds']:>6.2f}s  ({session.timing['audio_generation_seconds']/total_duration*100:>5.1f}%)")
-            print("─" * 70)
-            print(f"Total:             {total_duration:>6.2f}s  (100.0%)")
-            print("=" * 70 + "\n")
-
-            # Save AI turn to history with timing
-            ai_turn = TurnData(
+    def _stage_commit_ai_turn(self, session: SessionState) -> None:
+        """Append the AI's verse to the history exactly once."""
+        session.turn_history.append(
+            TurnData(
                 turn_number=session.current_turn,
                 player="ai",
                 lyrics=session.lyrics,
                 audio_url=session.ai_audio_url,
-                timing=session.timing.copy()
+                timing=dict(session.timing or {}),
             )
-            session.turn_history.append(ai_turn)
-            session.current_turn += 1
+        )
+        session.current_turn += 1
+        session.ai_turn_committed = True
 
-            # Reset retry count on success
-            session.retry_count = 0
+    def _finish_turn(self, session: SessionState) -> PipelineStep:
+        """Wrap up a completed turn: timings, cleanup, next step.
 
-            # Clean up audio file after successful processing
-            self._cleanup_audio(session)
+        Returns the terminal step; the caller assigns it once the session's
+        run slot has been released.
+        """
+        timing = session.timing or {}
+        total_duration = sum(
+            timing.get(key, 0.0)
+            for key in (
+                "transcription_seconds",
+                "lyricist_seconds",
+                "grid_builder_seconds",
+                "audio_generation_seconds",
+            )
+        )
+        timing["total_seconds"] = round(total_duration, 2)
+        if session.turn_history and session.turn_history[-1].player == "ai":
+            session.turn_history[-1].timing = dict(timing)
 
-            # Determine next state
-            if session.current_turn > session.total_turns:
-                session.step = PipelineStep.JUDGING
-                self._judge_battle(session)
-                session.step = PipelineStep.COMPLETE
-            else:
-                session.step = PipelineStep.AWAITING_USER
+        self._print_timing_summary(session, timing, total_duration)
 
-        except Exception as e:
-            session.retry_count += 1
-            session.step = PipelineStep.ERROR
-            if session.retry_count >= 2:
-                session.error = f"Failed after 2 attempts: {str(e)}"
-                # Clean up audio file after all retries exhausted
-                self._cleanup_audio(session)
-            else:
-                session.error = f"Attempt {session.retry_count} failed: {str(e)}. You can retry."
-                # Keep audio file for retry
+        # Reset retry count on success
+        session.retry_count = 0
+        self._cleanup_audio(session)
+
+        # Determine next state
+        if session.current_turn > session.total_turns:
+            session.step = PipelineStep.JUDGING
+            self._judge_battle(session)
+            return PipelineStep.COMPLETE
+        return PipelineStep.AWAITING_USER
+
+    def _print_timing_summary(self, session: SessionState, timing: dict, total: float) -> None:
+        def pct(value: float) -> float:
+            return (value / total * 100) if total else 0.0
+
+        print("\n" + "=" * 70)
+        print(f"⏱️  TIMING SUMMARY (Turn {session.current_turn - 1})")
+        print("=" * 70)
+        for label, key in (
+            ("Transcription:    ", "transcription_seconds"),
+            ("Lyricist:         ", "lyricist_seconds"),
+            ("Grid Builder:     ", "grid_builder_seconds"),
+            ("Audio Generation: ", "audio_generation_seconds"),
+        ):
+            value = timing.get(key, 0.0)
+            print(f"{label} {value:>6.2f}s  ({pct(value):>5.1f}%)")
+        print("─" * 70)
+        print(f"Total:             {total:>6.2f}s  (100.0%)")
+        print("=" * 70 + "\n")
 
     def _judge_battle(self, session: SessionState) -> None:
         """Use AI to judge the battle and pick a winner."""
@@ -306,15 +609,24 @@ class PipelineService:
         transcript = build_judge_transcript(session.turn_history, opponent)
 
         messages = [
-            {"role": "system", "content": build_judge_system_prompt(opponent)},
+            {
+                "role": "system",
+                "content": build_judge_system_prompt(
+                    opponent, session.opponent_persona
+                ),
+            },
             {"role": "user", "content": transcript},
         ]
+
+        # Its own env var on purpose: the judge is a plain chat-completions
+        # call, while OPENAI_MODEL drives the gpt-5-family reasoning lyricist.
+        judge_model = os.environ.get("OPENAI_JUDGE_MODEL", "gpt-4o-mini")
 
         max_attempts = 3
         for attempt in range(1, max_attempts + 1):
             try:
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model=judge_model,
                     messages=messages,
                     response_format={"type": "json_object"},
                     temperature=0.7,
@@ -326,7 +638,8 @@ class PipelineService:
                     raise ValueError(f"Invalid winner value: '{winner}'")
                 session.winner = winner
                 session.judge_reason = result.get("reason", "")
-                print(f"🏆 Judge decision: {session.winner} — {session.judge_reason}")
+                print(f"🏆 Judge decision: {session.winner}")
+                _log_content("JUDGE REASON", session.judge_reason or "")
                 return
             except Exception as e:
                 print(f"⚠️  Judge attempt {attempt}/{max_attempts} failed: {e}")
@@ -339,10 +652,10 @@ class PipelineService:
         if session.audio_path and Path(session.audio_path).exists():
             try:
                 Path(session.audio_path).unlink()
-                session.audio_path = None
             except Exception:
                 pass
+        session.audio_path = None
 
 
-# Global service instance
+# Global service instance (cheap to build: no network clients yet)
 pipeline_service = PipelineService()

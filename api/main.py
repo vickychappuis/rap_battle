@@ -5,6 +5,7 @@ Provides REST API endpoints and serves static files.
 """
 
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -16,10 +17,34 @@ load_dotenv()
 
 from api.routes import session_router
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Say plainly which credentials are missing, then serve anyway.
+
+    Missing keys are not fatal: the app must boot and answer /health so the
+    problem is diagnosable instead of an import-time crash loop. The pipeline
+    builds its API clients lazily and fails per-turn with a clear message.
+    """
+    missing = [
+        name
+        for name in ("OPENAI_API_KEY", "ELEVENLABS_API_KEY")
+        if not os.environ.get(name)
+    ]
+    if missing:
+        print(
+            f"⚠️  Missing environment variable(s): {', '.join(missing)}. "
+            "The API will start and /health will answer, but battles will "
+            "fail until they are set (see .env.example)."
+        )
+    yield
+
+
 app = FastAPI(
     title="Rap Battle API",
     description="Backend API for the rap battle frontend",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 _extra_origins = [
@@ -35,7 +60,9 @@ app.add_middleware(
         "http://localhost:3000",
         *_extra_origins,
     ],
-    allow_credentials=True,
+    # No cookies, no Authorization header: the API has no accounts. Leaving
+    # credentials on would only widen what a browser is allowed to send.
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

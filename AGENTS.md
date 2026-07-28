@@ -43,8 +43,12 @@ using the Web Audio clock.
 - Prefer small, clear changes over large refactors (POC pace).
 - **Frontend:** follow `visual_style_guide.md`; don't add new design rules.
 - Keep frontend dependencies minimal.
-- Python dependencies belong in `requirements.txt`; avoid adding new ones unless
-  a task requires it.
+- Python dependencies belong in `requirements.txt` (test-only ones in
+  `requirements-dev.txt`); avoid adding new ones unless a task requires it.
+  Both are pinned with `~=` at major.minor — bumping a minor is a deliberate act.
+- Backend changes should come with tests. `python -m pytest` runs battles
+  through the real API with only the external services stubbed, so it is fast
+  and free; add to `tests/` rather than testing by hand.
 
 ## Configuration & secrets
 

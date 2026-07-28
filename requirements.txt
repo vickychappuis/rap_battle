@@ -1,9 +1,30 @@
-fastapi>=0.109.0
-uvicorn>=0.27.0
-python-multipart>=0.0.6
-python-dotenv
-openai>=1.0.0
-langchain>=0.1.0
-langchain-openai>=0.0.5
-pydantic>=2.0.0
-requests>=2.31.0
+# Runtime dependencies.
+#
+# Pinning strategy: compatible-release (`~=`) locked to the major.minor that the
+# code was written and tested against. Patch releases float so bugfixes and
+# security patches arrive without edits; minor and major bumps require a
+# deliberate change. This matters here because langchain/langchain-openai and
+# openai ship breaking changes on minor bumps, and an unbounded `>=` floor let a
+# fresh install jump a whole major version.
+#
+# Only packages actually imported by `api/` and `core/` are listed. Test-only
+# dependencies live in requirements-dev.txt.
+
+# Web framework / server
+fastapi~=0.140.1
+uvicorn~=0.51.0
+python-multipart~=0.0.32   # required by FastAPI for UploadFile/File form uploads
+
+# Config
+python-dotenv~=1.2.2
+
+# LLM / model clients
+openai~=2.48.0
+langchain-core~=1.5.1      # imported directly (prompts, output parsers)
+langchain-openai~=1.4.1
+
+# Data modelling
+pydantic~=2.13.4
+
+# HTTP client (ElevenLabs REST calls in core/generation.py)
+requests~=2.34.2

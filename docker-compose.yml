@@ -3,13 +3,15 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
-    dns: 8.8.8.8
     ports:
       - "8000:8000"
     volumes:
-      # Hot reload: mount source code
+      # Mount source code for editing (restart the container to pick up changes;
+      # uvicorn runs without --reload)
       - .:/app
-      # Prevent overwriting container's venv
+      # Anonymous volume masks the host's .venv/ (macOS/linux-native binaries)
+      # so it can't shadow anything inside the container. Deps are installed
+      # into the image's system site-packages, not into /app/.venv.
       - /app/.venv
     env_file:
       - .env

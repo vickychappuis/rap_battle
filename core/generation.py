@@ -31,11 +31,14 @@ def create_lyricist_agent(model: str | None = None):
     model = model or os.environ.get("OPENAI_MODEL", "gpt-5-mini")
     parser = PydanticOutputParser(pydantic_object=LyricistOutput)
     prompt = ChatPromptTemplate.from_template(LYRICIST_PROMPT_TEMPLATE)
+    # No `temperature`: gpt-5 reasoning models ignore it and langchain-openai
+    # silently strips it from the request, so setting it only misleads.
+    # `response_format` does carry through — it becomes `text.format` on the
+    # Responses API, which is what keeps the output parseable JSON.
     llm = ChatOpenAI(
         model=model,
         reasoning={"effort": "low"},
         output_version="responses/v1",
-        temperature=0.7,
         model_kwargs={"response_format": {"type": "json_object"}},
     )
     chain = prompt | llm | parser
@@ -62,17 +65,34 @@ def validate_lyricist_output(output: LyricistOutput, expected_bars: int) -> None
                 f"Expected {expected_bars} bars, got {actual_bars} (too few to pad)"
             )
 
+    # Report the final bar count, not the pre-coercion one.
+    final_bars = len(output.bars)
     total_words = sum(len(bar.split()) for bar in output.bars)
-    print(f"✓ Validation passed: {actual_bars} bars, {total_words} total words")
+    print(f"✓ Validation passed: {final_bars} bars, {total_words} total words")
 
 
-def generate_music(tts_prompt: str, seconds: float, api_key: str) -> str:
-    """Generate music via the ElevenLabs API and return the saved MP3 path."""
-    output_dir = Path("music_output")
-    output_dir.mkdir(exist_ok=True)
+def generate_music(
+    tts_prompt: str,
+    seconds: float,
+    api_key: str,
+    output_path: str | Path | None = None,
+) -> str:
+    """Generate music via the ElevenLabs API and return the saved MP3 path.
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_path = output_dir / f"rap_battle_{timestamp}.mp3"
+    Args:
+        output_path: Where to write the MP3. Defaults to a timestamped file in
+            a CWD-relative ``music_output/`` directory (legacy behaviour, kept
+            for callers that move the file themselves). Pass a destination to
+            write it directly and avoid concurrent battles colliding.
+    """
+    if output_path is None:
+        output_dir = Path("music_output")
+        output_dir.mkdir(exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = output_dir / f"rap_battle_{timestamp}.mp3"
+    else:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
     headers = {"xi-api-key": api_key, "Content-Type": "application/json"}
 

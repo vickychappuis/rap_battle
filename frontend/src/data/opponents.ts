@@ -1,3 +1,5 @@
+import type { OpponentPersonaPayload } from "../api/session";
+
 export type OpponentProfile = {
   id: string;
   name: string;
@@ -16,7 +18,7 @@ export const OPPONENTS: OpponentProfile[] = [
     claims: "Enlightened, above clout and beef",
     reality: "Obsessed with being respected",
     extraInfo: "Checks Reddit threads about himself every night before bed",
-    imageSrc: "/max_gorilla.png",
+    imageSrc: "/max_gorilla.webp",
   },
   {
     id: "bad-panda",
@@ -25,7 +27,7 @@ export const OPPONENTS: OpponentProfile[] = [
     claims: "Street-certified, dangerous",
     reality: "Never been in a real fight",
     extraInfo: "Got pressed once and apologized immediately",
-    imageSrc: "/bad_panda.png",
+    imageSrc: "/bad_panda.webp",
   },
   {
     id: "rat-killai",
@@ -34,6 +36,21 @@ export const OPPONENTS: OpponentProfile[] = [
     claims: "Viral star, next big thing",
     reality: "One hit wonder",
     extraInfo: "Introduces himself using a song nobody remembers",
-    imageSrc: "/rat_killa.png",
+    imageSrc: "/rat_killa.webp",
   },
 ];
+
+/**
+ * Map a profile to the API's persona payload: the whole character sheet the
+ * player reads on the card, so the lyricist can rap in character. `id` and
+ * `imageSrc` are display-only and stay in the browser.
+ */
+export function toPersonaPayload(opponent: OpponentProfile): OpponentPersonaPayload {
+  return {
+    name: opponent.name,
+    age: opponent.age,
+    claims: opponent.claims,
+    reality: opponent.reality,
+    extra_info: opponent.extraInfo,
+  };
+}

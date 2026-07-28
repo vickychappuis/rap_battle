@@ -14,10 +14,13 @@ export function BattleStage() {
     error,
     countdown,
     turnHistory,
+    retryCount,
     winner,
     judgeReason,
     startBattle,
     startRecording,
+    retryTurn,
+    startOver,
   } = useSession();
 
   const turnsPerPlayer = sessionData?.turns_per_player ?? 2;
@@ -40,10 +43,13 @@ export function BattleStage() {
             turnHistory={turnHistory}
             status={status}
             error={error}
+            retryCount={retryCount}
             winner={winner}
             judgeReason={judgeReason}
             startBattle={startBattle}
             startRecording={startRecording}
+            retryTurn={retryTurn}
+            startOver={startOver}
           />
 
 {(state === "complete" || state === "judging") && (

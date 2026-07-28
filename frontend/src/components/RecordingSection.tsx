@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useAnimatedDots } from '../hooks/useAnimatedDots';
+import { MAX_TURN_RETRIES } from '../hooks/useSession';
 import type { SessionState, UseSessionReturn } from '../hooks/useSession';
 import type { SessionStatus } from '../api/session';
-import { OPPONENTS } from '../data/opponents';
+import { OPPONENTS, toPersonaPayload } from '../data/opponents';
 import { PlayerCard } from './PlayerCard';
 
 interface RecordingSectionProps {
@@ -12,10 +13,13 @@ interface RecordingSectionProps {
   turnHistory: UseSessionReturn['turnHistory'];
   status: SessionStatus | null;
   error: UseSessionReturn['error'];
+  retryCount: number;
   winner: string | null;
   judgeReason: string | null;
   startBattle: UseSessionReturn['startBattle'];
   startRecording: UseSessionReturn['startRecording'];
+  retryTurn: UseSessionReturn['retryTurn'];
+  startOver: UseSessionReturn['startOver'];
 }
 
 type PipelineStep = 'transcribing' | 'generating_lyrics' | 'generating_audio' | 'complete';
@@ -56,10 +60,13 @@ export function RecordingSection({
   turnHistory,
   status,
   error,
+  retryCount,
   winner,
   judgeReason,
   startBattle,
   startRecording,
+  retryTurn,
+  startOver,
 }: RecordingSectionProps) {
   const [opponent] = useState(() => {
     const randomIndex = Math.floor(Math.random() * OPPONENTS.length);
@@ -75,6 +82,36 @@ export function RecordingSection({
   const isComplete = state === 'complete';
   const isClickable = !isRecording && !isConnecting && !isProcessing && !isJudging;
   const hasSession = sessionData !== null;
+  const isError = state === 'error';
+
+  // Error recovery. The backend only accepts a new recording while the session
+  // is idle/awaiting_user, so re-recording after a pipeline failure is rejected
+  // with a 400 - such a turn has to be resumed through POST /retry instead.
+  // retry_count === 0 in an error state means the pipeline never ran (a
+  // frontend/mic failure), and there re-recording is the right move.
+  const canRetryTurn = isError && hasSession && retryCount > 0 && retryCount < MAX_TURN_RETRIES;
+  const canReRecord = isError && hasSession && retryCount === 0;
+  // Retries spent (or the session is gone): only a fresh battle can continue.
+  const mustStartFresh = isError && !canRetryTurn && !canReRecord;
+
+  const startFreshBattle = () => {
+    startOver();
+    startBattle(toPersonaPayload(opponent));
+  };
+
+  const handleMicClick = () => {
+    if (isError) {
+      if (canRetryTurn) retryTurn();
+      else if (canReRecord) startRecording();
+      else startFreshBattle();
+      return;
+    }
+    if (isComplete || !hasSession) {
+      startBattle(toPersonaPayload(opponent));
+      return;
+    }
+    startRecording();
+  };
 
   const bpm = sessionData?.bpm ?? 0;
   const recordDuration = sessionData?.record_duration ?? 0;
@@ -93,6 +130,9 @@ export function RecordingSection({
     if (state === 'processing') return 'Processing...';
     if (state === 'playing_response') return 'AI Responding...';
     if (isJudging) return 'Judging...';
+    if (canRetryTurn) return 'Retry';
+    if (canReRecord) return 'Try Again';
+    if (mustStartFresh) return 'Start Over';
     if (isComplete) return 'New Battle';
     if (hasSession) return 'Start Recording';
     return 'Start Battle';
@@ -241,7 +281,7 @@ export function RecordingSection({
       {/* Right: Mic (full height) */}
       <div
         className="battle-grid__mic"
-        onClick={isClickable ? (isComplete ? () => startBattle(opponent.name) : hasSession ? startRecording : () => startBattle(opponent.name)) : undefined}
+        onClick={isClickable ? handleMicClick : undefined}
         style={{
           cursor: isClickable ? 'pointer' : 'default',
           backgroundColor: isRecording ? 'rgba(230, 28, 76, 0.1)' : 'transparent',
@@ -249,7 +289,7 @@ export function RecordingSection({
         }}
       >
         <img
-          src="/mic.png"
+          src="/mic.webp"
           alt="Microphone"
           className={`battle-grid__mic-img${hasSession && !isRecording ? ' battle-grid__mic-img--cta' : ''}`}
         />

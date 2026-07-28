@@ -15,12 +15,12 @@ export function LandingPage() {
       <main className="landing-content">
         <div className="landing-gloves">
           <img
-            src="/red_glove.png"
+            src="/red_glove.webp"
             alt="Red boxing glove"
             className="landing-glove landing-glove--red"
           />
           <img
-            src="/blue_glove.png"
+            src="/blue_glove.webp"
             alt="Blue boxing glove"
             className="landing-glove landing-glove--blue"
           />
@@ -31,7 +31,7 @@ export function LandingPage() {
           onClick={() => navigate("/battle")}
         >
           <img
-            src="/torn_yellow_paper.png"
+            src="/torn_yellow_paper.webp"
             alt=""
             className="landing-cta__bg"
           />

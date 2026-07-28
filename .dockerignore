@@ -1,25 +1,55 @@
+# Build context for api/Dockerfile (context is the repo root).
+# The API image needs: requirements.txt, api/, core/, assets/tracks/.
+# Everything else is excluded to keep the context and image small.
+
 # Python
 .venv/
+venv/
+env/
 __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+*.egg-info/
+build/
+dist/
 
-# Node
-node_modules/
-frontend/node_modules/
-frontend/dist/
+# Frontend: not used by the API image at all (it is built from its own
+# context, ./frontend, by docker-compose). ~149MB of the repo.
+frontend/
 
-# IDE
+# Tests are not run inside the image
+tests/
+pytest.ini
+requirements-dev.txt
+
+# Secrets: never bake .env into an image. docker-compose supplies it at
+# runtime via `env_file`.
+.env
+.env.*
+
+# Runtime-generated audio; api/main.py recreates the directory on startup
+api/static/generated/
+music_output/
+
+# IDE / agent tooling
 .idea/
 .vscode/
+.claude/
+.gemini-clipboard/
 
 # Git
 .git/
 .gitignore
+.gitattributes
+
+# Build config itself is not needed inside the image
+.dockerignore
+docker-compose.yml
+frontend/Dockerfile
 
 # Misc
 *.md
 *.log
-.env.example
-music_output/
+LICENSE
+.DS_Store

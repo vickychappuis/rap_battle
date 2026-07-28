@@ -36,7 +36,10 @@ node_modules/
 api/static/generated/
 music_output/
 
-# Test outputs and generated files
+# Test caches and outputs
+.pytest_cache/
+.coverage
+htmlcov/
 *_results.json
 *_comparison*.json
 test_output/

@@ -43,13 +43,44 @@ export interface SessionStatus {
   judge_reason?: string;
 }
 
+/**
+ * Error carrying the HTTP status of a failed API response, so callers can tell
+ * a permanent failure (404 - session gone) from a transient one (500, network).
+ */
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 const API_BASE = '/api/session';
 
-export async function createSession(opponentName?: string): Promise<SessionResponse> {
+/**
+ * The AI opponent's character sheet, in the snake_case shape the API expects.
+ * Every field is optional server-side, and the whole object may be omitted -
+ * a session created without one just battles a nameless MC.
+ */
+export interface OpponentPersonaPayload {
+  name?: string;
+  age?: number;
+  claims?: string;
+  reality?: string;
+  extra_info?: string;
+}
+
+export async function createSession(
+  opponent?: OpponentPersonaPayload
+): Promise<SessionResponse> {
   const response = await fetch(API_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ opponent_name: opponentName }),
+    // `opponent_name` is sent alongside the persona so older/simpler clients
+    // (and the backend's fallback path) keep working unchanged.
+    body: JSON.stringify({ opponent_name: opponent?.name, opponent }),
   });
 
   if (!response.ok) {
@@ -82,7 +113,11 @@ export async function getSessionStatus(sessionId: string): Promise<SessionStatus
   const response = await fetch(`${API_BASE}/${sessionId}/status`);
 
   if (!response.ok) {
-    throw new Error(`Failed to get session status: ${response.statusText}`);
+    const error = (await response.json().catch(() => null)) as { detail?: string } | null;
+    throw new ApiError(
+      error?.detail || `Failed to get session status: ${response.statusText}`,
+      response.status
+    );
   }
 
   return response.json();

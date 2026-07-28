@@ -36,7 +36,7 @@ html {
 body {
   font-family: var(--font-body);
   background-color: var(--color-paper-white);
-  background-image: url("/background-light.png");
+  background-image: url("/background-light.webp");
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center top;
@@ -67,7 +67,7 @@ body {
   min-height: 5rem;
   padding: 0 var(--page-padding);
   overflow: visible;
-  background-image: url("/header.png");
+  background-image: url("/header.webp");
   background-size: cover;
   background-position: 60% center;
   background-repeat: no-repeat;

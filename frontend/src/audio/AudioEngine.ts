@@ -20,6 +20,11 @@ export class AudioEngine {
   private baseTrackGain: GainNode | null = null;
   private aiResponseGain: GainNode | null = null;
 
+  // Pending "AI response finished" timer, so stop()/close() can cancel playback
+  // without leaving awaiting callers hanging on a promise that never settles.
+  private aiResponseTimeoutId: number | null = null;
+  private aiResponseResolve: (() => void) | null = null;
+
   /**
    * Initialize the AudioContext (must be called after user gesture).
    */
@@ -100,6 +105,9 @@ export class AudioEngine {
       throw new Error('AudioEngine not initialized or base track not playing');
     }
 
+    // A previous response is superseded by this one - unblock anyone awaiting it
+    this.settleAiResponse();
+
     // Load the AI response audio
     const buffer = await this.loadAudio(url);
 
@@ -118,10 +126,26 @@ export class AudioEngine {
     const durationSec = Math.ceil(buffer.duration);
     const done = new Promise<void>((resolve) => {
       const totalWait = waitMs + buffer.duration * 1000;
-      setTimeout(resolve, totalWait);
+      this.aiResponseResolve = resolve;
+      this.aiResponseTimeoutId = window.setTimeout(() => this.settleAiResponse(), totalWait);
     });
 
     return { durationSec, done };
+  }
+
+  /**
+   * Resolve the pending "AI response finished" promise and drop its timer.
+   * Called when playback finishes normally and when playback is cut short by
+   * stop()/close(), so awaiting callers never hang.
+   */
+  private settleAiResponse(): void {
+    if (this.aiResponseTimeoutId !== null) {
+      clearTimeout(this.aiResponseTimeoutId);
+      this.aiResponseTimeoutId = null;
+    }
+    const resolve = this.aiResponseResolve;
+    this.aiResponseResolve = null;
+    resolve?.();
   }
 
   /**
@@ -149,6 +173,9 @@ export class AudioEngine {
    * Stop all playback and clean up.
    */
   stop(): void {
+    // Cancel the pending playback timer and resolve its promise
+    this.settleAiResponse();
+
     if (this.baseTrackSource) {
       try {
         this.baseTrackSource.stop();
