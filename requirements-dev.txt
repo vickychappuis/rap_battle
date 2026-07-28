@@ -1,0 +1,13 @@
+# Development / test dependencies.
+#
+# This file includes requirements.txt, so a full dev environment is just:
+#
+#   pip install -r requirements-dev.txt
+#   python -m pytest
+#
+# Same compatible-release (`~=`) strategy as requirements.txt.
+
+-r requirements.txt
+
+pytest~=9.1.1
+httpx~=0.28.1   # required by fastapi.testclient.TestClient (transitive via openai, declared here because tests import it)
