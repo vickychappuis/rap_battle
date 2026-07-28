@@ -60,6 +60,30 @@ export class ApiError extends Error {
 const API_BASE = '/api/session';
 
 /**
+ * Shown when the API cannot be reached at all, as opposed to answering with a
+ * problem. Two cases produce it: a rejected fetch (nothing on the other end)
+ * and a 502/503/504, which comes from the proxy in front of the API rather
+ * than from the API itself. A free backend that has been suspended or has
+ * spun down looks exactly like this, and "Service Unavailable" is not
+ * something a player should be asked to read.
+ */
+const ARENA_DOWN_MESSAGE =
+  'The arena is closed right now — the battle server is down. Try again later.';
+
+function isArenaDown(status: number): boolean {
+  return status === 502 || status === 503 || status === 504;
+}
+
+/** fetch(), but a transport failure reads as "the arena is closed". */
+async function reachApi(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch {
+    throw new Error(ARENA_DOWN_MESSAGE);
+  }
+}
+
+/**
  * The AI opponent's character sheet, in the snake_case shape the API expects.
  * Every field is optional server-side, and the whole object may be omitted -
  * a session created without one just battles a nameless MC.
@@ -75,7 +99,7 @@ export interface OpponentPersonaPayload {
 export async function createSession(
   opponent?: OpponentPersonaPayload
 ): Promise<SessionResponse> {
-  const response = await fetch(API_BASE, {
+  const response = await reachApi(API_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     // `opponent_name` is sent alongside the persona so older/simpler clients
@@ -88,6 +112,7 @@ export async function createSession(
       const err = await response.json().catch(() => ({ detail: 'Rate limit exceeded' }));
       throw new Error(err.detail || 'Too many battles. Try again later.');
     }
+    if (isArenaDown(response.status)) throw new Error(ARENA_DOWN_MESSAGE);
     throw new Error(`Failed to create session: ${response.statusText}`);
   }
 
@@ -98,12 +123,13 @@ export async function uploadRecording(sessionId: string, audioBlob: Blob): Promi
   const formData = new FormData();
   formData.append('audio', audioBlob, 'recording.webm');
 
-  const response = await fetch(`${API_BASE}/${sessionId}/recording`, {
+  const response = await reachApi(`${API_BASE}/${sessionId}/recording`, {
     method: 'POST',
     body: formData,
   });
 
   if (!response.ok) {
+    if (isArenaDown(response.status)) throw new Error(ARENA_DOWN_MESSAGE);
     const error = await response.json().catch(() => ({ detail: response.statusText }));
     throw new Error(error.detail || 'Failed to upload recording');
   }
@@ -124,11 +150,12 @@ export async function getSessionStatus(sessionId: string): Promise<SessionStatus
 }
 
 export async function retryTurn(sessionId: string): Promise<{ status: string; retry_count?: number; message?: string }> {
-  const response = await fetch(`${API_BASE}/${sessionId}/retry`, {
+  const response = await reachApi(`${API_BASE}/${sessionId}/retry`, {
     method: 'POST',
   });
 
   if (!response.ok) {
+    if (isArenaDown(response.status)) throw new Error(ARENA_DOWN_MESSAGE);
     const error = await response.json().catch(() => ({ detail: response.statusText }));
     throw new Error(error.detail || 'Failed to retry');
   }
