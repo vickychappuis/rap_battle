@@ -565,7 +565,7 @@ button:disabled:hover {
   font-weight: 600;
 }
 
-/* Right: Mic (spans full height) */
+/* Right: Mic (spans full height). A real <button>, so reset its chrome. */
 .battle-grid__mic {
   grid-row: 1 / 3;
   grid-column: 2;
@@ -573,14 +573,35 @@ button:disabled:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
   border: 3px solid var(--color-ink-black);
   border-radius: 4px;
   padding: 13px;
   transition: background-color var(--transition-normal);
 }
 
-.battle-grid__mic:hover {
+.battle-grid__mic:hover:not(:disabled) {
   background-color: rgba(0, 0, 0, 0.03);
+}
+
+.battle-grid__mic:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* Recording is disabled too, but stays vivid with its red tint. */
+.battle-grid__mic--recording:disabled {
+  background-color: rgba(230, 28, 76, 0.1);
+  opacity: 1;
+}
+
+.battle-grid__error {
+  grid-column: 1 / -1;
+  color: red;
+  font-weight: bold;
+  padding: 8px;
 }
 
 .battle-grid__mic-img {

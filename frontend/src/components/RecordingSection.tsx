@@ -280,25 +280,22 @@ export function RecordingSection({
       )}
 
       {/* Right: Mic (full height) */}
-      <div
-        className="battle-grid__mic"
-        onClick={isClickable ? handleMicClick : undefined}
-        style={{
-          cursor: isClickable ? 'pointer' : 'default',
-          backgroundColor: isRecording ? 'rgba(230, 28, 76, 0.1)' : 'transparent',
-          opacity: isConnecting || isProcessing || isJudging ? 0.6 : 1,
-        }}
+      <button
+        type="button"
+        className={`battle-grid__mic${isRecording ? ' battle-grid__mic--recording' : ''}`}
+        onClick={handleMicClick}
+        disabled={!isClickable}
       >
         <img
           src="/mic.webp"
-          alt="Microphone"
+          alt=""
           className={`battle-grid__mic-img${hasSession && !isRecording ? ' battle-grid__mic-img--cta' : ''}`}
         />
-        <p className="battle-grid__mic-label">{micLabel()}</p>
-      </div>
+        <span className="battle-grid__mic-label">{micLabel()}</span>
+      </button>
 
       {error && (
-        <div style={{ gridColumn: '1 / -1', color: 'red', fontWeight: 'bold', padding: '8px' }}>
+        <div className="battle-grid__error" role="alert">
           Error: {error}
         </div>
       )}
