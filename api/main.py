@@ -4,6 +4,7 @@ FastAPI application for the rap battle frontend.
 Provides REST API endpoints and serves static files.
 """
 
+import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -14,6 +15,12 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Uvicorn only configures its own loggers; this gives the app's module loggers
+# a handler so pipeline/domain logs actually reach the console.
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+
+logger = logging.getLogger(__name__)
 
 from api.routes import session_router
 
@@ -32,10 +39,11 @@ async def lifespan(app: FastAPI):
         if not os.environ.get(name)
     ]
     if missing:
-        print(
-            f"⚠️  Missing environment variable(s): {', '.join(missing)}. "
-            "The API will start and /health will answer, but battles will "
-            "fail until they are set (see .env.example)."
+        logger.warning(
+            "Missing environment variable(s): %s. The API will start and "
+            "/health will answer, but battles will fail until they are set "
+            "(see .env.example).",
+            ", ".join(missing),
         )
     yield
 

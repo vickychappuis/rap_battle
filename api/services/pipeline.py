@@ -10,6 +10,7 @@ recording, and the user's turn is committed to the history exactly once.
 
 import os
 import json
+import logging
 import shutil
 import threading
 import time
@@ -36,6 +37,8 @@ from core.generation import (
 )
 from core.grid_builder import build_grid_from_lyrics
 from api.models.session import PipelineStep, TurnData
+
+logger = logging.getLogger(__name__)
 
 
 # How long an idle session (and the mp3s it generated) is kept before the
@@ -66,12 +69,10 @@ def _content_logging_enabled() -> bool:
 
 
 def _log_content(title: str, body: str) -> None:
-    """Print sensitive content only when the debug flag is on."""
+    """Log sensitive content only when the debug flag is on."""
     if not _content_logging_enabled():
         return
-    print(f"\n=== {title} ===")
-    print(body)
-    print("=" * (len(title) + 8) + "\n")
+    logger.info("=== %s ===\n%s", title, body)
 
 
 @dataclass
@@ -228,9 +229,10 @@ def cleanup_expired(now: Optional[float] = None) -> dict:
                 pass
 
     if expired or removed_files:
-        print(
-            f"🧹 Cleanup: removed {len(expired)} expired session(s) "
-            f"and {removed_files} generated file(s)"
+        logger.info(
+            "Cleanup: removed %d expired session(s) and %d generated file(s)",
+            len(expired),
+            removed_files,
         )
     return {"sessions_removed": len(expired), "files_removed": removed_files}
 
@@ -387,7 +389,7 @@ class PipelineService:
 
             for stage in self._build_stages():
                 if stage.is_done(session):
-                    print(f"⏭️  {stage.name}: already done for this recording, skipping")
+                    logger.info("%s: already done for this recording, skipping", stage.name)
                     continue
                 session.step = stage.step
                 started = time.time()
@@ -397,7 +399,7 @@ class PipelineService:
                     session.timing[stage.timing_key] = round(
                         elapsed, stage.timing_precision
                     )
-                    print(f"⏱️  {stage.name} completed in {elapsed:.2f}s")
+                    logger.info("%s completed in %.2fs", stage.name, elapsed)
 
             final_step = self._finish_turn(session)
 
@@ -583,9 +585,7 @@ class PipelineService:
         def pct(value: float) -> float:
             return (value / total * 100) if total else 0.0
 
-        print("\n" + "=" * 70)
-        print(f"⏱️  TIMING SUMMARY (Turn {session.current_turn - 1})")
-        print("=" * 70)
+        lines = [f"TIMING SUMMARY (Turn {session.current_turn - 1})"]
         for label, key in (
             ("Transcription:    ", "transcription_seconds"),
             ("Lyricist:         ", "lyricist_seconds"),
@@ -593,10 +593,9 @@ class PipelineService:
             ("Audio Generation: ", "audio_generation_seconds"),
         ):
             value = timing.get(key, 0.0)
-            print(f"{label} {value:>6.2f}s  ({pct(value):>5.1f}%)")
-        print("─" * 70)
-        print(f"Total:             {total:>6.2f}s  (100.0%)")
-        print("=" * 70 + "\n")
+            lines.append(f"{label} {value:>6.2f}s  ({pct(value):>5.1f}%)")
+        lines.append(f"Total:             {total:>6.2f}s  (100.0%)")
+        logger.info("\n".join(lines))
 
     def _judge_battle(self, session: SessionState) -> None:
         """Use AI to judge the battle and pick a winner."""
@@ -638,11 +637,11 @@ class PipelineService:
                     raise ValueError(f"Invalid winner value: '{winner}'")
                 session.winner = winner
                 session.judge_reason = result.get("reason", "")
-                print(f"🏆 Judge decision: {session.winner}")
+                logger.info("Judge decision: %s", session.winner)
                 _log_content("JUDGE REASON", session.judge_reason or "")
                 return
             except Exception as e:
-                print(f"⚠️  Judge attempt {attempt}/{max_attempts} failed: {e}")
+                logger.warning("Judge attempt %d/%d failed: %s", attempt, max_attempts, e)
 
         session.winner = "draw"
         session.judge_reason = "The judge couldn't decide — it's a draw!"

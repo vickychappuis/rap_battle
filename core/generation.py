@@ -6,6 +6,7 @@ Shared by the API pipeline:
 - ElevenLabs music generation
 """
 
+import logging
 import math
 import os
 from datetime import datetime
@@ -20,6 +21,8 @@ from core.models import LyricistOutput
 from core.prompts import LYRICIST_PROMPT_TEMPLATE
 
 ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/music/detailed"
+
+logger = logging.getLogger(__name__)
 
 
 def create_lyricist_agent(model: str | None = None):
@@ -53,12 +56,12 @@ def validate_lyricist_output(output: LyricistOutput, expected_bars: int) -> None
     actual_bars = len(output.bars)
 
     if actual_bars > expected_bars:
-        print(f"⚠ Got {actual_bars} bars, truncating to {expected_bars}")
+        logger.warning("Got %d bars, truncating to %d", actual_bars, expected_bars)
         output.bars = output.bars[:expected_bars]
     elif actual_bars < expected_bars:
         diff = expected_bars - actual_bars
         if diff <= 2:
-            print(f"⚠ Got {actual_bars} bars, padding {diff} to reach {expected_bars}")
+            logger.warning("Got %d bars, padding %d to reach %d", actual_bars, diff, expected_bars)
             output.bars.extend(["yeah..."] * diff)
         else:
             raise ValueError(
@@ -68,7 +71,7 @@ def validate_lyricist_output(output: LyricistOutput, expected_bars: int) -> None
     # Report the final bar count, not the pre-coercion one.
     final_bars = len(output.bars)
     total_words = sum(len(bar.split()) for bar in output.bars)
-    print(f"✓ Validation passed: {final_bars} bars, {total_words} total words")
+    logger.info("Validation passed: %d bars, %d total words", final_bars, total_words)
 
 
 def generate_music(
@@ -100,15 +103,18 @@ def generate_music(
     # fractional durations the model may handle awkwardly.
     payload = {"prompt": tts_prompt, "music_length_ms": math.ceil(seconds) * 1000}
 
-    print("🎵 Calling ElevenLabs API...")
-    print(f"   Duration: {seconds}s ({payload['music_length_ms']}ms)")
+    logger.info(
+        "Calling ElevenLabs API (duration: %ss, %sms)",
+        seconds,
+        payload["music_length_ms"],
+    )
 
     try:
         response = requests.post(ELEVENLABS_API_URL, headers=headers, json=payload)
         response.raise_for_status()
         with open(output_path, "wb") as f:
             f.write(response.content)
-        print(f"✓ Music generated: {output_path}")
+        logger.info("Music generated: %s", output_path)
         return str(output_path)
     except requests.exceptions.RequestException as e:
         error_msg = f"ElevenLabs API error: {e}"

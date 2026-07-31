@@ -1,9 +1,12 @@
 """Speech-to-text via the OpenAI transcription API."""
 
+import logging
 import os
 from pathlib import Path
 
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 
 def transcribe_audio(audio_path: str, language: str = "en") -> str:
@@ -28,7 +31,7 @@ def transcribe_audio(audio_path: str, language: str = "en") -> str:
     client = OpenAI(api_key=api_key)
     stt_model = os.environ.get("OPENAI_STT_MODEL", "whisper-1")
 
-    print(f"Transcribing {audio_path.name}...")
+    logger.info("Transcribing %s...", audio_path.name)
     with open(audio_path, "rb") as audio_file:
         transcription = client.audio.transcriptions.create(
             model=stt_model,

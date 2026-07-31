@@ -5,6 +5,8 @@ Covers finding #9 (mock mode silently falling through to the billed API),
 #14 (hardcoded judge model) and #15 (TURNS_PER_PLAYER at the HTTP level).
 """
 
+import logging
+
 import pytest
 
 from conftest import start_session, upload_turn, wait_for_step
@@ -101,33 +103,33 @@ def test_judge_model_defaults_to_gpt_4o_mini(
 
 
 def test_transcription_and_lyrics_are_not_logged_by_default(
-    client, recording, fake_externals, monkeypatch, capsys
+    client, recording, fake_externals, monkeypatch, caplog
 ):
     monkeypatch.delenv("DEBUG_LOG_CONTENT", raising=False)
 
-    sid = start_session(client)["session_id"]
-    upload_turn(client, sid, recording)
-    status = wait_for_step(client, sid, {"awaiting_user"})
+    with caplog.at_level(logging.INFO):
+        sid = start_session(client)["session_id"]
+        upload_turn(client, sid, recording)
+        status = wait_for_step(client, sid, {"awaiting_user"})
 
-    out = capsys.readouterr().out
-    assert status["transcription"] not in out, "the transcription was logged"
-    assert status["lyrics"] not in out, "the generated lyrics were logged"
+    assert status["transcription"] not in caplog.text, "the transcription was logged"
+    assert status["lyrics"] not in caplog.text, "the generated lyrics were logged"
     # ...but the non-sensitive progress/timing logs are still there.
-    assert "TIMING SUMMARY" in out
+    assert "TIMING SUMMARY" in caplog.text
 
 
 def test_debug_flag_re_enables_content_logging(
-    client, recording, fake_externals, monkeypatch, capsys
+    client, recording, fake_externals, monkeypatch, caplog
 ):
     monkeypatch.setenv("DEBUG_LOG_CONTENT", "true")
 
-    sid = start_session(client)["session_id"]
-    upload_turn(client, sid, recording)
-    status = wait_for_step(client, sid, {"awaiting_user"})
+    with caplog.at_level(logging.INFO):
+        sid = start_session(client)["session_id"]
+        upload_turn(client, sid, recording)
+        status = wait_for_step(client, sid, {"awaiting_user"})
 
-    out = capsys.readouterr().out
-    assert status["transcription"] in out
-    assert status["lyrics"] in out
+    assert status["transcription"] in caplog.text
+    assert status["lyrics"] in caplog.text
 
 
 # --- Finding #11: timing is exposed on /status --------------------------------

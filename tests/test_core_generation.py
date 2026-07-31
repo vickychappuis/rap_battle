@@ -1,5 +1,6 @@
 """Tests for the lyricist agent config, output validation and music writing."""
 
+import logging
 import math
 from pathlib import Path
 
@@ -47,31 +48,32 @@ def test_lyricist_agent_still_requests_json_output():
 # --- #10: validation logs the post-coercion count --------------------------
 
 
-def test_validation_logs_the_truncated_count(capsys):
+def test_validation_logs_the_truncated_count(caplog):
     output = LyricistOutput(bars=[f"bar {i}" for i in range(6)])
-    validate_lyricist_output(output, 4)
+    with caplog.at_level(logging.INFO):
+        validate_lyricist_output(output, 4)
 
     assert len(output.bars) == 4
-    out = capsys.readouterr().out
-    assert "✓ Validation passed: 4 bars" in out
-    assert "Validation passed: 6 bars" not in out
+    assert "Validation passed: 4 bars" in caplog.text
+    assert "Validation passed: 6 bars" not in caplog.text
 
 
-def test_validation_logs_the_padded_count(capsys):
+def test_validation_logs_the_padded_count(caplog):
     output = LyricistOutput(bars=["one", "two"])
-    validate_lyricist_output(output, 4)
+    with caplog.at_level(logging.INFO):
+        validate_lyricist_output(output, 4)
 
     assert len(output.bars) == 4
-    out = capsys.readouterr().out
-    assert "✓ Validation passed: 4 bars" in out
-    assert "Validation passed: 2 bars" not in out
+    assert "Validation passed: 4 bars" in caplog.text
+    assert "Validation passed: 2 bars" not in caplog.text
 
 
-def test_validation_word_count_matches_the_final_bars(capsys):
+def test_validation_word_count_matches_the_final_bars(caplog):
     output = LyricistOutput(bars=["a b c", "d e f", "g h i"])
-    validate_lyricist_output(output, 2)
+    with caplog.at_level(logging.INFO):
+        validate_lyricist_output(output, 2)
 
-    assert "✓ Validation passed: 2 bars, 6 total words" in capsys.readouterr().out
+    assert "Validation passed: 2 bars, 6 total words" in caplog.text
 
 
 def test_validation_raises_when_too_few_bars_to_pad():
