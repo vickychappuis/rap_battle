@@ -36,6 +36,7 @@ from core.generation import (
     generate_music,
 )
 from core.grid_builder import build_grid_from_lyrics
+from core.judge import judge_battle
 from api.models.session import PipelineStep, TurnData
 
 logger = logging.getLogger(__name__)
@@ -598,53 +599,14 @@ class PipelineService:
         logger.info("\n".join(lines))
 
     def _judge_battle(self, session: SessionState) -> None:
-        """Use AI to judge the battle and pick a winner."""
-        from openai import OpenAI
-        client = OpenAI(api_key=self.openai_api_key)
-
-        from core.prompts.judge_prompt import build_judge_system_prompt, build_judge_transcript
-
-        opponent = session.opponent_name
-        transcript = build_judge_transcript(session.turn_history, opponent)
-
-        messages = [
-            {
-                "role": "system",
-                "content": build_judge_system_prompt(
-                    opponent, session.opponent_persona
-                ),
-            },
-            {"role": "user", "content": transcript},
-        ]
-
-        # Its own env var on purpose: the judge is a plain chat-completions
-        # call, while OPENAI_MODEL drives the gpt-5-family reasoning lyricist.
-        judge_model = os.environ.get("OPENAI_JUDGE_MODEL", "gpt-4o-mini")
-
-        max_attempts = 3
-        for attempt in range(1, max_attempts + 1):
-            try:
-                response = client.chat.completions.create(
-                    model=judge_model,
-                    messages=messages,
-                    response_format={"type": "json_object"},
-                    temperature=0.7,
-                )
-                result_text = response.choices[0].message.content or "{}"
-                result = json.loads(result_text)
-                winner = result.get("winner", "")
-                if winner not in ("user", "ai"):
-                    raise ValueError(f"Invalid winner value: '{winner}'")
-                session.winner = winner
-                session.judge_reason = result.get("reason", "")
-                logger.info("Judge decision: %s", session.winner)
-                _log_content("JUDGE REASON", session.judge_reason or "")
-                return
-            except Exception as e:
-                logger.warning("Judge attempt %d/%d failed: %s", attempt, max_attempts, e)
-
-        session.winner = "draw"
-        session.judge_reason = "The judge couldn't decide — it's a draw!"
+        """Have the core judge score the battle and store the verdict."""
+        session.winner, session.judge_reason = judge_battle(
+            session.turn_history,
+            session.opponent_name,
+            session.opponent_persona,
+            api_key=self.openai_api_key,
+        )
+        _log_content("JUDGE REASON", session.judge_reason or "")
 
     def _cleanup_audio(self, session: SessionState) -> None:
         """Clean up temp audio file."""
