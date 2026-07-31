@@ -46,3 +46,6 @@ test_output/
 
 .gemini-clipboard/
 .claude/
+
+# Playwright MCP session artifacts
+.playwright-mcp/
