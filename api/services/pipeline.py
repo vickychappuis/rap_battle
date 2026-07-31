@@ -8,36 +8,38 @@ no external call (and no billed API call) is ever made twice for one
 recording, and the user's turn is committed to the history exactly once.
 """
 
-import os
 import json
 import logging
+import os
 import shutil
 import threading
 import time
-from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from core.stt import transcribe_audio
+from api.models.session import PipelineStep, TurnData
+from core.generation import (
+    create_lyricist_agent,
+    generate_music,
+    validate_lyricist_output,
+)
+from core.grid_builder import build_grid_from_lyrics
+from core.judge import Winner, judge_battle
+from core.models import GridBuilderOutput, LyricistOutput
 from core.prompts import (
     TurnData as PromptTurnData,
+)
+from core.prompts import (
     build_battle_context,
     build_opponent_persona_block,
     build_turn_instructions,
 )
-from core.models import LyricistOutput, GridBuilderOutput
-from core.generation import (
-    create_lyricist_agent,
-    validate_lyricist_output,
-    generate_music,
-)
-from core.grid_builder import build_grid_from_lyrics
-from core.judge import judge_battle
-from api.models.session import PipelineStep, TurnData
+from core.stt import transcribe_audio
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +53,9 @@ MAX_TURN_RETRIES = 2
 # How long an idle session (and the mp3s it generated) is kept before the
 # next session creation sweeps it away. Sessions live in memory only, so
 # without this the process grows for its whole lifetime.
-SESSION_TTL_SECONDS = int(os.environ.get("SESSION_TTL_SECONDS", 3600))
+SESSION_TTL_SECONDS = int(os.environ.get("SESSION_TTL_SECONDS", "3600"))
 GENERATED_AUDIO_TTL_SECONDS = int(
-    os.environ.get("GENERATED_AUDIO_TTL_SECONDS", SESSION_TTL_SECONDS)
+    os.environ.get("GENERATED_AUDIO_TTL_SECONDS", str(SESSION_TTL_SECONDS))
 )
 
 GENERATED_AUDIO_DIR = Path(__file__).parent.parent / "static" / "generated"
@@ -86,7 +88,7 @@ class SessionState:
     # Client-supplied character sheet for the AI MC (name / age / claims /
     # reality / extra_info), already validated and sanitised by the route's
     # `OpponentPersona` model. None means "no persona for this battle".
-    opponent_persona: Optional[dict] = None
+    opponent_persona: dict | None = None
 
     # Derived values (calculated in __post_init__)
     grid_beats: int = field(init=False)
@@ -95,24 +97,24 @@ class SessionState:
     # State
     step: PipelineStep = PipelineStep.IDLE
     current_turn: int = 1
-    turn_history: List[TurnData] = field(default_factory=list)
+    turn_history: list[TurnData] = field(default_factory=list)
     retry_count: int = 0
 
     # Current turn data (cleared each turn)
-    transcription: Optional[str] = None
-    lyrics: Optional[str] = None
-    ai_audio_url: Optional[str] = None
-    error: Optional[str] = None
-    timing: Optional[dict] = None
+    transcription: str | None = None
+    lyrics: str | None = None
+    ai_audio_url: str | None = None
+    error: str | None = None
+    timing: dict | None = None
 
     # Judge results
-    winner: Optional[str] = None
-    judge_reason: Optional[str] = None
+    winner: Winner | None = None
+    judge_reason: str | None = None
 
     # Internal state
-    audio_path: Optional[str] = None
-    lyricist_output: Optional[LyricistOutput] = None
-    grid_builder_output: Optional[GridBuilderOutput] = None
+    audio_path: str | None = None
+    lyricist_output: LyricistOutput | None = None
+    grid_builder_output: GridBuilderOutput | None = None
 
     # Stage bookkeeping for the current recording. These make the pipeline
     # resumable: a retry skips whatever is already recorded as done.
@@ -192,15 +194,15 @@ class _Stage:
     step: PipelineStep
     is_done: Callable[[SessionState], bool]
     run: Callable[[SessionState], None]
-    timing_key: Optional[str] = None
+    timing_key: str | None = None
     timing_precision: int = 2
 
 
 # Global session storage (in-memory for POC)
-sessions: Dict[str, SessionState] = {}
+sessions: dict[str, SessionState] = {}
 
 
-def cleanup_expired(now: Optional[float] = None) -> dict:
+def cleanup_expired(now: float | None = None) -> dict:
     """Drop stale sessions and generated mp3s (TTL-based, swept on demand).
 
     Called when a new session is created - no scheduler, no new dependency.
@@ -251,11 +253,11 @@ class PipelineService:
     # --- Lazily built external clients ------------------------------------
 
     @property
-    def openai_api_key(self) -> Optional[str]:
+    def openai_api_key(self) -> str | None:
         return os.environ.get("OPENAI_API_KEY")
 
     @property
-    def elevenlabs_api_key(self) -> Optional[str]:
+    def elevenlabs_api_key(self) -> str | None:
         return os.environ.get("ELEVENLABS_API_KEY")
 
     def _ensure_lyricist(self) -> None:
@@ -335,7 +337,7 @@ class PipelineService:
 
     # --- Stages ------------------------------------------------------------
 
-    def _build_stages(self) -> List[_Stage]:
+    def _build_stages(self) -> list[_Stage]:
         return [
             _Stage(
                 name="Transcription",
@@ -403,15 +405,15 @@ class PipelineService:
 
             final_step = self._finish_turn(session)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - boundary: any stage failure becomes a retryable error state
             session.retry_count += 1
             final_step = PipelineStep.ERROR
             if session.retry_count >= MAX_TURN_RETRIES:
-                session.error = f"Failed after {MAX_TURN_RETRIES} attempts: {str(e)}"
+                session.error = f"Failed after {MAX_TURN_RETRIES} attempts: {e!s}"
                 # Out of retries: nothing left to resume, drop the recording.
                 self._cleanup_audio(session)
             else:
-                session.error = f"Attempt {session.retry_count} failed: {str(e)}. You can retry."
+                session.error = f"Attempt {session.retry_count} failed: {e!s}. You can retry."
                 # Completed stages stay on the session so a retry can resume.
         finally:
             session.touch()
@@ -422,6 +424,7 @@ class PipelineService:
             session.step = final_step
 
     def _stage_transcribe(self, session: SessionState) -> None:
+        assert session.audio_path is not None  # set by start_pipeline
         session.transcription = transcribe_audio(session.audio_path)
         _log_content("OPPONENT BARS (STT Transcription)", session.transcription)
 
@@ -493,6 +496,7 @@ class PipelineService:
 
     def _stage_grid_builder(self, session: SessionState) -> None:
         """Build the TTS prompt (pure Python - instant)."""
+        assert session.lyricist_output is not None  # earlier stage's output
         session.grid_builder_output = build_grid_from_lyrics(
             session.lyricist_output, session.bpm, session.seconds
         )
@@ -500,6 +504,7 @@ class PipelineService:
         _log_content("FINAL TTS PROMPT", session.grid_builder_output.tts_prompt)
 
     def _stage_generate_audio(self, session: SessionState) -> None:
+        assert session.grid_builder_output is not None  # earlier stage's output
         GENERATED_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
         # Generate unique filename for this turn
@@ -522,13 +527,16 @@ class PipelineService:
                 )
             shutil.copy(mock_response_path, output_path)
         else:
-            # Write straight to the per-turn destination: the legacy default
-            # path is a shared, second-resolution filename that concurrent
-            # battles collide on.
+            api_key = self.elevenlabs_api_key
+            if not api_key:
+                raise RuntimeError(
+                    "ELEVENLABS_API_KEY is not set - audio generation cannot run. "
+                    "Set it in your environment or .env file (see .env.example)."
+                )
             generate_music(
                 tts_prompt=session.grid_builder_output.tts_prompt,
                 seconds=session.seconds,
-                api_key=self.elevenlabs_api_key,
+                api_key=api_key,
                 output_path=output_path,
             )
 
@@ -612,8 +620,8 @@ class PipelineService:
         if session.audio_path and Path(session.audio_path).exists():
             try:
                 Path(session.audio_path).unlink()
-            except Exception:
-                pass
+            except OSError as e:
+                logger.debug("Could not remove temp audio %s: %s", session.audio_path, e)
         session.audio_path = None
 
 

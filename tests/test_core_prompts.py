@@ -1,15 +1,13 @@
 """Tests for the judge and lyricist prompt builders."""
 
 from dataclasses import dataclass
-from typing import Optional
 
 from core.prompts import (
     TURN_INSTRUCTIONS,
-    build_turn_instructions,
     build_judge_system_prompt,
     build_judge_transcript,
+    build_turn_instructions,
 )
-
 
 AI_NAME = "Max Gorilla"
 
@@ -17,8 +15,8 @@ AI_NAME = "Max Gorilla"
 @dataclass
 class FakeTurn:
     player: str
-    transcription: Optional[str] = None
-    lyrics: Optional[str] = None
+    transcription: str | None = None
+    lyrics: str | None = None
 
 
 def _battle_history():

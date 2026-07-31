@@ -2,39 +2,40 @@
 
 import math
 import os
-import uuid
 import tempfile
 import time
+import uuid
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
+
 from api.models.session import (
+    PipelineStep,
     SessionCreate,
     SessionResponse,
     SessionStatus,
-    PipelineStep,
-    TurnData,
 )
 from api.services.pipeline import (
     MAX_TURN_RETRIES,
     SessionState,
     cleanup_expired,
-    sessions,
     pipeline_service,
+    sessions,
 )
 
 router = APIRouter(prefix="/api/session", tags=["session"])
 
 # Configuration from environment
-BPM = int(os.environ.get("BPM", 90))
-BARS_PER_TURN = int(os.environ.get("BARS_PER_TURN", 16))
-TURNS_PER_PLAYER = int(os.environ.get("TURNS_PER_PLAYER", 2))
+BPM = int(os.environ.get("BPM", "90"))
+BARS_PER_TURN = int(os.environ.get("BARS_PER_TURN", "16"))
+TURNS_PER_PLAYER = int(os.environ.get("TURNS_PER_PLAYER", "2"))
 
 # Maximum size of one uploaded recording. A ~60s browser recording is
 # Opus/WebM at ~32kbps (~250KB); 8MB leaves generous room for Safari's
 # mp4/AAC while capping what a single request can make us buffer.
 # Configurable via MAX_UPLOAD_MB.
-MAX_UPLOAD_MB = float(os.environ.get("MAX_UPLOAD_MB", 8))
+MAX_UPLOAD_MB = float(os.environ.get("MAX_UPLOAD_MB", "8"))
 MAX_UPLOAD_BYTES = int(MAX_UPLOAD_MB * 1024 * 1024)
 UPLOAD_CHUNK_BYTES = 256 * 1024
 
@@ -66,12 +67,14 @@ def _check_rate_limit() -> str | None:
 
 
 @router.post("", response_model=SessionResponse)
-async def create_session(body: SessionCreate = SessionCreate()):
+async def create_session(body: SessionCreate | None = None):
     """
     Create a new battle session with global rate limiting.
 
     Returns session config including BPM, bars per turn, and base track URL.
     """
+    body = body if body is not None else SessionCreate()
+
     limit_msg = _check_rate_limit()
     if limit_msg:
         raise HTTPException(status_code=429, detail=limit_msg)
@@ -119,7 +122,7 @@ async def create_session(body: SessionCreate = SessionCreate()):
 
 
 @router.post("/{session_id}/recording")
-async def upload_recording(session_id: str, audio: UploadFile = File(...)):
+async def upload_recording(session_id: str, audio: Annotated[UploadFile, File()]):
     """
     Upload recorded audio blob (WebM/MP4).
 
@@ -160,10 +163,11 @@ async def upload_recording(session_id: str, audio: UploadFile = File(...)):
     os.close(fd)
 
     # Stream to disk in chunks so an oversized (or lying) client can never
-    # make us buffer an unbounded body in memory.
+    # make us buffer an unbounded body in memory. The blocking writes are
+    # 256KB chunks to a local temp file - too brief to be worth a thread hop.
     try:
         written = 0
-        with open(temp_path, "wb") as f:
+        with open(temp_path, "wb") as f:  # noqa: ASYNC230
             while chunk := await audio.read(UPLOAD_CHUNK_BYTES):
                 written += len(chunk)
                 if written > MAX_UPLOAD_BYTES:
@@ -177,7 +181,7 @@ async def upload_recording(session_id: str, audio: UploadFile = File(...)):
         )
     except Exception as e:
         Path(temp_path).unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail=f"Failed to save audio: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save audio: {e}") from e
 
     # Start pipeline processing in background. `start_pipeline` clears the
     # previous turn's data and flips the session into a busy step.

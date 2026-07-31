@@ -22,7 +22,6 @@ from core.prompts import (
 from core.prompts.persona import PERSONA_CLOSE, PERSONA_OPEN
 from tests.conftest import TEST_TURNS_PER_PLAYER, upload_turn, wait_for_step
 
-
 MAX_GORILLA = {
     "name": "Max Gorilla",
     "age": 35,
@@ -219,7 +218,7 @@ def test_injection_payload_is_contained_in_the_lyricist_prompt(client, recording
     # 2. It is confined to the `key: value` lines it was given; no injected
     #    newline can forge a new field or escape the block.
     assert data.count("\n") == len(INJECTION) - 1
-    assert set(line.split(":")[0] for line in data.split("\n")) <= set(
+    assert {line.split(":")[0] for line in data.split("\n")} <= set(
         PERSONA_FIELD_LIMITS
     )
 
@@ -254,11 +253,11 @@ def test_injection_payload_is_contained_in_the_judge_prompt(client, recording, f
 
 
 def test_control_characters_and_invisibles_are_stripped():
-    dirty = "Max‮gnihtemos​ Gorilla\x07\x00\ttail"
+    dirty = "Max‮gnihtemos\u200b Gorilla\x07\x00\ttail"
     clean = sanitize_prompt_text(dirty, 200)
 
     assert "‮" not in clean  # bidi override
-    assert "​" not in clean  # zero width space
+    assert "\u200b" not in clean  # zero width space
     assert "\x07" not in clean and "\x00" not in clean
     assert clean == "Maxgnihtemos Gorilla tail"
 
@@ -274,7 +273,7 @@ def test_persona_cannot_forge_the_closing_marker():
 
 
 def test_a_persona_made_only_of_junk_is_dropped_entirely():
-    assert build_opponent_persona_block({"claims": "```", "reality": "​"}) == NO_PERSONA_BLOCK
+    assert build_opponent_persona_block({"claims": "```", "reality": "\u200b"}) == NO_PERSONA_BLOCK
 
 
 def test_sanitising_happens_at_the_model_boundary_too():

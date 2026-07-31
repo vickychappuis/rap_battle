@@ -4,13 +4,13 @@ Pydantic models for the Rap Battle system.
 These models define the data schemas for agent inputs/outputs.
 """
 
-from typing import List
+
 from pydantic import BaseModel, Field, field_validator
 
 
 class LyricistOutput(BaseModel):
     """Schema for Lyricist agent output - bar-based format"""
-    bars: List[str] = Field(description="List of rap bars (lines), one per bar")
+    bars: list[str] = Field(description="List of rap bars (lines), one per bar")
     mood_arc: str = Field(
         default="confident",
         description="Mood arc description, e.g. 'confident -> mocking -> aggressive'"

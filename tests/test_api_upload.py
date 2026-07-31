@@ -6,7 +6,7 @@ window was floored while the AI verse is ceiled).
 
 import math
 
-from conftest import TEST_BPM, start_session, upload_turn, wait_for_step
+from conftest import TEST_BPM, start_session, wait_for_step
 
 
 def _oversized_recording(size):
@@ -53,6 +53,7 @@ def test_recording_at_the_limit_is_accepted(client, fake_externals, monkeypatch)
 def test_rejected_upload_leaves_no_temp_file(client, fake_externals, monkeypatch):
     import tempfile
     from pathlib import Path
+
     from api.routes import session as session_route
 
     monkeypatch.setattr(session_route, "MAX_UPLOAD_BYTES", 4096)
@@ -72,6 +73,7 @@ def test_upload_limit_is_configurable_from_the_environment():
     """The cap is read from MAX_UPLOAD_MB (default 8MB)."""
     import importlib
     import os
+
     from api.routes import session as session_route
 
     assert session_route.MAX_UPLOAD_BYTES == int(

@@ -9,7 +9,7 @@ on:
 # needs no API keys and costs nothing to run.
 jobs:
   backend:
-    name: Backend (pytest)
+    name: Backend (lint + types + pytest)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -19,6 +19,8 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-dev.txt
       - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: mypy
       - run: python -m pytest
 
   frontend:

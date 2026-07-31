@@ -1,7 +1,8 @@
 """Pydantic models for session management."""
 
 from enum import Enum
-from typing import Dict, List, Literal, Optional
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from core.prompts.persona import (
@@ -31,10 +32,10 @@ class TurnData(BaseModel):
     """Data for a single turn in the battle."""
     turn_number: int
     player: Literal["user", "ai"]
-    transcription: Optional[str] = None  # User turns
-    lyrics: Optional[str] = None  # AI turns
-    audio_url: Optional[str] = None  # AI turns
-    timing: Optional[Dict[str, float]] = None  # Per-stage seconds for AI turns
+    transcription: str | None = None  # User turns
+    lyrics: str | None = None  # AI turns
+    audio_url: str | None = None  # AI turns
+    timing: dict[str, float] | None = None  # Per-stage seconds for AI turns
 
 
 class OpponentPersona(BaseModel):
@@ -46,17 +47,17 @@ class OpponentPersona(BaseModel):
     then sanitised down to a single harmless line before it can reach a prompt.
     Unknown keys (`id`, `imageSrc`, ...) are ignored rather than carried along.
     """
-    name: Optional[str] = Field(default=None, max_length=PERSONA_FIELD_LIMITS["name"])
-    age: Optional[int] = Field(default=None, ge=MIN_AGE, le=MAX_AGE)
-    claims: Optional[str] = Field(default=None, max_length=PERSONA_FIELD_LIMITS["claims"])
-    reality: Optional[str] = Field(default=None, max_length=PERSONA_FIELD_LIMITS["reality"])
-    extra_info: Optional[str] = Field(
+    name: str | None = Field(default=None, max_length=PERSONA_FIELD_LIMITS["name"])
+    age: int | None = Field(default=None, ge=MIN_AGE, le=MAX_AGE)
+    claims: str | None = Field(default=None, max_length=PERSONA_FIELD_LIMITS["claims"])
+    reality: str | None = Field(default=None, max_length=PERSONA_FIELD_LIMITS["reality"])
+    extra_info: str | None = Field(
         default=None, max_length=PERSONA_FIELD_LIMITS["extra_info"]
     )
 
     @field_validator("name", "claims", "reality", "extra_info")
     @classmethod
-    def _sanitize(cls, value: Optional[str], info) -> Optional[str]:
+    def _sanitize(cls, value: str | None, info) -> str | None:
         if value is None:
             return None
         # Runs after the max_length constraint, so this only ever shortens a
@@ -84,14 +85,14 @@ class SessionCreate(BaseModel):
     Both fields are optional: a body of `{}` or a bare `opponent_name` is still
     a valid request, and the battle then runs without a persona.
     """
-    opponent_name: Optional[str] = Field(
+    opponent_name: str | None = Field(
         default=None, max_length=PERSONA_FIELD_LIMITS["name"]
     )
-    opponent: Optional[OpponentPersona] = None
+    opponent: OpponentPersona | None = None
 
     @field_validator("opponent_name")
     @classmethod
-    def _sanitize_name(cls, value: Optional[str]) -> Optional[str]:
+    def _sanitize_name(cls, value: str | None) -> str | None:
         if value is None:
             return None
         return sanitize_prompt_text(value, PERSONA_FIELD_LIMITS["name"]) or None
@@ -115,12 +116,12 @@ class SessionStatus(BaseModel):
     step: PipelineStep
     current_turn: int
     turns_per_player: int
-    turn_history: List[TurnData]
-    transcription: Optional[str] = None
-    lyrics: Optional[str] = None
-    ai_audio_url: Optional[str] = None
-    error: Optional[str] = None
+    turn_history: list[TurnData]
+    transcription: str | None = None
+    lyrics: str | None = None
+    ai_audio_url: str | None = None
+    error: str | None = None
     retry_count: int = 0
-    timing: Optional[Dict[str, float]] = None  # Per-stage seconds for current turn
-    winner: Optional[Literal["user", "ai", "draw"]] = None
-    judge_reason: Optional[str] = None
+    timing: dict[str, float] | None = None  # Per-stage seconds for current turn
+    winner: Literal["user", "ai", "draw"] | None = None
+    judge_reason: str | None = None

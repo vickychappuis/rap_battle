@@ -5,15 +5,14 @@ recording, poll for status, repeat for the second round, then read the verdict.
 """
 
 import pytest
-
-from api.services.pipeline import MAX_TURN_RETRIES
 from conftest import (
-    TEST_BARS,
     TEST_TURNS_PER_PLAYER,
     start_session,
     upload_turn,
     wait_for_step,
 )
+
+from api.services.pipeline import MAX_TURN_RETRIES
 
 
 def test_full_two_round_battle(client, recording, fake_externals):

@@ -8,9 +8,7 @@ Covers finding #9 (mock mode silently falling through to the billed API),
 import logging
 
 import pytest
-
 from conftest import start_session, upload_turn, wait_for_step
-
 
 # --- Finding #9: mock mode must fail loudly -----------------------------------
 

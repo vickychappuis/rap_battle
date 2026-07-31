@@ -19,7 +19,6 @@ os.environ.setdefault("ELEVENLABS_API_KEY", "el-test-dummy")
 import pytest
 from fastapi.testclient import TestClient
 
-
 # Keep battles short so the suite stays fast: 2 bars at 90bpm is ~5s of audio.
 TEST_BPM = 90
 TEST_BARS = 2
@@ -59,8 +58,8 @@ def _reset_global_state():
     Both are module-level globals; without this the 4-per-hour limit trips
     partway through the suite and sessions leak across tests.
     """
-    from api.services.pipeline import sessions
     from api.routes import session as session_route
+    from api.services.pipeline import sessions
 
     sessions.clear()
     session_route._session_timestamps.clear()

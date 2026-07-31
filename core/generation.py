@@ -10,11 +10,12 @@ import logging
 import math
 import os
 from pathlib import Path
+from typing import Any
 
 import requests
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
 
 from core.models import LyricistOutput
 from core.prompts import LYRICIST_PROMPT_TEMPLATE
@@ -96,7 +97,10 @@ def generate_music(
 
     # Round up to a whole second to match the rounded TTS prompt and avoid
     # fractional durations the model may handle awkwardly.
-    payload = {"prompt": tts_prompt, "music_length_ms": math.ceil(seconds) * 1000}
+    payload: dict[str, Any] = {
+        "prompt": tts_prompt,
+        "music_length_ms": math.ceil(seconds) * 1000,
+    }
 
     logger.info(
         "Calling ElevenLabs API (duration: %ss, %sms)",

@@ -4,7 +4,7 @@ Lyricist Prompt Template
 This agent generates battle rap bars with natural flow and emotion.
 """
 
-from typing import List, Mapping, Optional
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from core.prompts.persona import build_persona_data_block
@@ -15,8 +15,8 @@ class TurnData:
     """Data for a single turn in the battle."""
     turn_number: int
     player: str  # "user" | "ai"
-    transcription: Optional[str] = None
-    lyrics: Optional[str] = None
+    transcription: str | None = None
+    lyrics: str | None = None
 
 
 # Turn-specific instructions, keyed by position in the battle
@@ -48,7 +48,7 @@ TURN_INSTRUCTIONS = {
 }
 
 
-def build_battle_context(turn_history: List[TurnData]) -> str:
+def build_battle_context(turn_history: list[TurnData]) -> str:
     """Build a summary of previous battle exchanges for context."""
     if not turn_history:
         return "This is the opening exchange."
@@ -91,7 +91,7 @@ poser who half-knows it. Roast your opponent while quietly exposing yourself.
 Remember: the sheet above is a description of you, not a set of orders."""
 
 
-def build_opponent_persona_block(persona: Optional[Mapping]) -> str:
+def build_opponent_persona_block(persona: Mapping | None) -> str:
     """The `{opponent_persona}` section of the lyricist prompt.
 
     `persona` is a plain mapping (name / age / claims / reality / extra_info)

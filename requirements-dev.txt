@@ -11,3 +11,7 @@
 
 pytest~=9.1.1
 httpx~=0.28.1   # required by fastapi.testclient.TestClient (transitive via openai, declared here because tests import it)
+
+# Lint + type check (configured in pyproject.toml, run in CI)
+ruff~=0.16.1
+mypy~=2.3.0

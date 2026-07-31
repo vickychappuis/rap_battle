@@ -31,7 +31,7 @@ def _run_without_openai_key(script: str) -> subprocess.CompletedProcess:
     env = {k: v for k, v in os.environ.items() if k != "OPENAI_API_KEY"}
     # .env would put the key back; point dotenv at a directory with no .env.
     env["PYTHONPATH"] = str(PROJECT_ROOT)
-    return subprocess.run(
+    return subprocess.run(  # noqa: PLW1510 - callers assert on returncode themselves
         [sys.executable, "-c", script],
         cwd=PROJECT_ROOT,
         env=env,
@@ -100,15 +100,16 @@ def test_missing_key_fails_with_an_explicit_message(monkeypatch):
     service = pipeline_mod.PipelineService()
 
     with pytest.raises(RuntimeError) as excinfo:
-        service.lyricist_chain
+        _ = service.lyricist_chain
 
     assert "OPENAI_API_KEY" in str(excinfo.value)
 
 
 def test_missing_key_surfaces_as_a_session_error(client, recording, monkeypatch):
     """A key that disappears at runtime becomes a retryable turn error."""
-    import api.services.pipeline as pipeline_mod
     from conftest import start_session, upload_turn, wait_for_step
+
+    import api.services.pipeline as pipeline_mod
 
     monkeypatch.setattr(pipeline_mod.pipeline_service, "_lyricist_chain", None)
     monkeypatch.setattr(pipeline_mod.pipeline_service, "_lyricist_parser", None)

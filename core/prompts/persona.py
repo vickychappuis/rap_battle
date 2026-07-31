@@ -18,7 +18,7 @@ caller reaching the prompt builders directly gets the same treatment.
 
 import re
 import unicodedata
-from typing import Mapping, Optional
+from collections.abc import Mapping
 
 # Per-field caps, applied to the RAW client value. Generous enough for the
 # comedy one-liners the game actually sends, small enough that a persona can
@@ -77,7 +77,7 @@ def sanitize_prompt_text(value: str, max_chars: int) -> str:
     return _WHITESPACE_RE.sub(" ", text).strip()[:max_chars]
 
 
-def build_persona_data_block(persona: Optional[Mapping]) -> Optional[str]:
+def build_persona_data_block(persona: Mapping | None) -> str | None:
     """Render a persona mapping as a delimited, sanitised `key: value` block.
 
     Returns None when there is nothing usable to render, so callers can fall

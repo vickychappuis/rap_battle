@@ -7,7 +7,8 @@ only wires session state into `judge_battle` and stores the verdict.
 import json
 import logging
 import os
-from typing import Mapping, Optional, Tuple
+from collections.abc import Mapping
+from typing import Any, Literal, cast
 
 import openai
 
@@ -18,15 +19,17 @@ logger = logging.getLogger(__name__)
 DEFAULT_JUDGE_MODEL = "gpt-4o-mini"
 JUDGE_MAX_ATTEMPTS = 3
 
-DRAW_VERDICT = ("draw", "The judge couldn't decide — it's a draw!")
+Winner = Literal["user", "ai", "draw"]
+
+DRAW_VERDICT: tuple[Winner, str] = ("draw", "The judge couldn't decide — it's a draw!")
 
 
 def judge_battle(
     turn_history,
     opponent_name: str,
-    opponent_persona: Optional[Mapping] = None,
-    api_key: Optional[str] = None,
-) -> Tuple[str, str]:
+    opponent_persona: Mapping | None = None,
+    api_key: str | None = None,
+) -> tuple[Winner, str]:
     """Judge a finished battle and return ``(winner, reason)``.
 
     ``winner`` is ``"user"`` or ``"ai"``; after ``JUDGE_MAX_ATTEMPTS`` failed
@@ -36,7 +39,9 @@ def judge_battle(
     client = openai.OpenAI(api_key=api_key)
 
     transcript = build_judge_transcript(turn_history, opponent_name)
-    messages = [
+    # `Any` on purpose: building the SDK's TypedDict message params here would
+    # couple this to openai's types for no checking benefit.
+    messages: list[Any] = [
         {
             "role": "system",
             "content": build_judge_system_prompt(opponent_name, opponent_persona),
@@ -62,8 +67,8 @@ def judge_battle(
             if winner not in ("user", "ai"):
                 raise ValueError(f"Invalid winner value: '{winner}'")
             logger.info("Judge decision: %s", winner)
-            return winner, result.get("reason", "")
-        except Exception as e:
+            return cast(Winner, winner), result.get("reason", "")
+        except Exception as e:  # noqa: BLE001 - any failed attempt (API, JSON, bad verdict) is retried
             logger.warning(
                 "Judge attempt %d/%d failed: %s", attempt, JUDGE_MAX_ATTEMPTS, e
             )

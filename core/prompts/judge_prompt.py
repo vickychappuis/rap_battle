@@ -4,7 +4,7 @@ Judge Prompt Template
 This agent judges a rap battle and picks a winner.
 """
 
-from typing import Mapping, Optional
+from collections.abc import Mapping
 
 from core.prompts.persona import (
     PERSONA_FIELD_LIMITS,
@@ -23,7 +23,7 @@ def _clean_name(opponent_name: str) -> str:
     )
 
 
-def _persona_section(opponent_name: str, persona: Optional[Mapping]) -> str:
+def _persona_section(opponent_name: str, persona: Mapping | None) -> str:
     """Flavour-only character sheet for the judge, framed as untrusted data."""
     persona_data = build_persona_data_block(persona)
     if persona_data is None:
@@ -39,7 +39,7 @@ def _persona_section(opponent_name: str, persona: Optional[Mapping]) -> str:
 
 
 def build_judge_system_prompt(
-    opponent_name: str, persona: Optional[Mapping] = None
+    opponent_name: str, persona: Mapping | None = None
 ) -> str:
     """System prompt for the judge.
 

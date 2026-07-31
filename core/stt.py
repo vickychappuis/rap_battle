@@ -24,15 +24,15 @@ def transcribe_audio(audio_path: str, language: str = "en") -> str:
     if not api_key:
         raise ValueError("OPENAI_API_KEY environment variable is required")
 
-    audio_path = Path(audio_path)
-    if not audio_path.exists():
-        raise FileNotFoundError(f"Audio file not found: {audio_path}")
+    path = Path(audio_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Audio file not found: {path}")
 
     client = OpenAI(api_key=api_key)
     stt_model = os.environ.get("OPENAI_STT_MODEL", "whisper-1")
 
-    logger.info("Transcribing %s...", audio_path.name)
-    with open(audio_path, "rb") as audio_file:
+    logger.info("Transcribing %s...", path.name)
+    with open(path, "rb") as audio_file:
         transcription = client.audio.transcriptions.create(
             model=stt_model,
             file=audio_file,
