@@ -89,9 +89,10 @@ this deployment's rate limit. The API needs `OPENAI_API_KEY`,
 
 ## License
 
-Code is MIT — see [LICENSE](LICENSE).
+All rights reserved — see [LICENSE](LICENSE). The source is public so you can
+read it; that grants no right to use, copy, modify, or redistribute it. Get in
+touch if you want to do any of those.
 
-The bundled assets are **not** covered by that grant: the base instrumental
-(`assets/tracks/`) and the artwork (`frontend/public/`) are used under licences
-held by the author and cannot be redistributed. Swap them for your own if you
-fork this.
+The bundled assets are covered too: the base instrumental (`assets/tracks/`)
+and the artwork (`frontend/public/`) are used under licences held by the author
+and cannot be redistributed.
