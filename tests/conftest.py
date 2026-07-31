@@ -81,10 +81,17 @@ def turns_per_player(request):
 
 @pytest.fixture(autouse=True)
 def _short_battle(monkeypatch, turns_per_player):
-    """Shrink the battle so recordings and generated audio stay small."""
+    """Shrink the battle so recordings and generated audio stay small.
+
+    The BPM comes from the track catalog, so the tests pin it by pinning the
+    catalog to a single known track.
+    """
+    from api import tracks as tracks_mod
     from api.routes import session as session_route
 
-    monkeypatch.setattr(session_route, "BPM", TEST_BPM)
+    monkeypatch.setattr(
+        tracks_mod, "TRACKS", [tracks_mod.Track("base_90bpm.mp3", TEST_BPM)]
+    )
     monkeypatch.setattr(session_route, "BARS_PER_TURN", TEST_BARS)
     monkeypatch.setattr(session_route, "TURNS_PER_PLAYER", turns_per_player)
 

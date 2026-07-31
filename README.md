@@ -53,6 +53,7 @@ ones are absent, and battles just fail until you set them.
 frontend/   React + TypeScript + Vite (Web Audio, mic recording)
 api/        FastAPI web layer — routes, pipeline orchestration
 core/       Domain logic: lyricist agent, beat grid, STT, prompts
+assets/     Base instrumentals (*_<bpm>bpm.mp3 — tempo parsed from the name)
 tests/      Backend suite (external APIs stubbed)
 ```
 

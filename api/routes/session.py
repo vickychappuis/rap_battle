@@ -23,11 +23,12 @@ from api.services.pipeline import (
     pipeline_service,
     sessions,
 )
+from api.tracks import choose_track
 
 router = APIRouter(prefix="/api/session", tags=["session"])
 
-# Configuration from environment
-BPM = int(os.environ.get("BPM", "90"))
+# Configuration from environment. The BPM is NOT here on purpose: it belongs
+# to the base track (see api/tracks.py), so tempo and audio stay in step.
 BARS_PER_TURN = int(os.environ.get("BARS_PER_TURN", "16"))
 TURNS_PER_PLAYER = int(os.environ.get("TURNS_PER_PLAYER", "2"))
 
@@ -85,6 +86,7 @@ async def create_session(body: SessionCreate | None = None):
     _session_timestamps.append(time.time())
 
     session_id = str(uuid.uuid4())
+    track = choose_track()
 
     # Resolve the AI MC's identity. The persona's own name wins when present;
     # `opponent_name` alone keeps working for clients that send nothing else.
@@ -99,7 +101,7 @@ async def create_session(body: SessionCreate | None = None):
     # Create session state
     session = SessionState(
         session_id=session_id,
-        bpm=BPM,
+        bpm=track.bpm,
         bars_per_turn=BARS_PER_TURN,
         turns_per_player=TURNS_PER_PLAYER,
         opponent_name=opponent_name or "the challenger",
@@ -109,7 +111,7 @@ async def create_session(body: SessionCreate | None = None):
 
     return SessionResponse(
         session_id=session_id,
-        bpm=BPM,
+        bpm=track.bpm,
         bars_per_turn=BARS_PER_TURN,
         turns_per_player=TURNS_PER_PLAYER,
         # Rounded UP: core.generation also ceils the ElevenLabs duration, so
@@ -117,7 +119,7 @@ async def create_session(body: SessionCreate | None = None):
         # number of seconds (16 bars @90bpm = 42.67s -> 43s on both sides).
         record_duration=math.ceil(session.seconds),
         max_turn_retries=MAX_TURN_RETRIES,
-        base_track_url="/static/tracks/base_90bpm.mp3",
+        base_track_url=track.url,
     )
 
 
