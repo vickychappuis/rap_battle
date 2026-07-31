@@ -13,12 +13,25 @@ export interface SessionResponse {
   base_track_url: string;
 }
 
+/** Who the judge crowned; `draw` when the judge could not decide. */
+export type Winner = 'user' | 'ai' | 'draw';
+
+/** Per-stage pipeline durations, in seconds. */
+export interface TurnTiming {
+  transcription_seconds?: number;
+  lyricist_seconds?: number;
+  grid_builder_seconds?: number;
+  audio_generation_seconds?: number;
+  total_seconds?: number;
+}
+
 export interface TurnData {
   turn_number: number;
   player: 'user' | 'ai';
   transcription?: string;
   lyrics?: string;
   audio_url?: string;
+  timing?: TurnTiming;
 }
 
 export interface SessionStatus {
@@ -41,7 +54,8 @@ export interface SessionStatus {
   ai_audio_url?: string;
   error?: string;
   retry_count?: number;
-  winner?: string;
+  timing?: TurnTiming;
+  winner?: Winner;
   judge_reason?: string;
 }
 

@@ -1,7 +1,7 @@
 """Pydantic models for session management."""
 
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Literal, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from core.prompts.persona import (
@@ -30,11 +30,11 @@ class PipelineStep(str, Enum):
 class TurnData(BaseModel):
     """Data for a single turn in the battle."""
     turn_number: int
-    player: str  # "user" | "ai"
+    player: Literal["user", "ai"]
     transcription: Optional[str] = None  # User turns
     lyrics: Optional[str] = None  # AI turns
     audio_url: Optional[str] = None  # AI turns
-    timing: Optional[dict] = None  # Timing data for AI turns
+    timing: Optional[Dict[str, float]] = None  # Per-stage seconds for AI turns
 
 
 class OpponentPersona(BaseModel):
@@ -121,6 +121,6 @@ class SessionStatus(BaseModel):
     ai_audio_url: Optional[str] = None
     error: Optional[str] = None
     retry_count: int = 0
-    timing: Optional[dict] = None  # Timing data for current turn
-    winner: Optional[str] = None
+    timing: Optional[Dict[str, float]] = None  # Per-stage seconds for current turn
+    winner: Optional[Literal["user", "ai", "draw"]] = None
     judge_reason: Optional[str] = None

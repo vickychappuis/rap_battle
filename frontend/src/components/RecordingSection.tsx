@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAnimatedDots } from '../hooks/useAnimatedDots';
 import type { SessionState, UseSessionReturn } from '../hooks/useSession';
-import type { SessionStatus } from '../api/session';
+import type { SessionStatus, Winner } from '../api/session';
 import { OPPONENTS, toPersonaPayload } from '../data/opponents';
 import { PlayerCard } from './PlayerCard';
 
@@ -14,7 +14,7 @@ interface RecordingSectionProps {
   error: UseSessionReturn['error'];
   retryCount: number;
   maxTurnRetries: number;
-  winner: string | null;
+  winner: Winner | null;
   judgeReason: string | null;
   startBattle: UseSessionReturn['startBattle'];
   startRecording: UseSessionReturn['startRecording'];

@@ -32,6 +32,7 @@ import type {
   SessionResponse,
   SessionStatus,
   TurnData,
+  Winner,
 } from '../api/session';
 import { useAudioEngine } from './useAudioEngine';
 
@@ -62,7 +63,7 @@ export interface UseSessionReturn {
   isFinalRound: boolean;
   retryCount: number;
   maxTurnRetries: number;
-  winner: string | null;
+  winner: Winner | null;
   judgeReason: string | null;
 
   // Actions
