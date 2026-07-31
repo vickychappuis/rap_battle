@@ -61,7 +61,7 @@ docker compose up
 
 ### Without Docker
 
-Requires Python 3.12+ and Node 20+.
+Requires Python 3.12+ and Node 22+.
 
 Backend:
 

@@ -1,0 +1,8 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - img "Rap Arena" [ref=e5]
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - img "Red boxing glove" [ref=e8]
+      - img "Blue boxing glove" [ref=e9]
+    - button "Enter the Arena" [ref=e10] [cursor=pointer]

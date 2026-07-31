@@ -1,0 +1,24 @@
+- generic [ref=e11]:
+  - banner [ref=e12]:
+    - img "Rap Arena" [ref=e13]
+  - main [ref=e14]:
+    - generic [ref=e16]:
+      - generic [ref=e18]:
+        - img "Bad Panda" [ref=e19]
+        - generic [ref=e20]:
+          - heading "Bad Panda" [level=2] [ref=e21]
+          - paragraph [ref=e22]: "Age: 18"
+          - paragraph [ref=e23]: "Claims: Street-certified, dangerous"
+          - paragraph [ref=e24]: "Reality: Never been in a real fight"
+          - paragraph [ref=e25]: "Extra Info: Got pressed once and apologized immediately"
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - generic [ref=e30]: "90"
+          - generic [ref=e31]: BPM
+        - generic [ref=e32]:
+          - generic [ref=e33]: "16"
+          - generic [ref=e34]: Bars
+        - generic [ref=e35]:
+          - generic [ref=e36]: "42"
+          - generic [ref=e37]: Secs
+      - button "Start Battle" [ref=e38] [cursor=pointer]
