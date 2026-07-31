@@ -131,20 +131,6 @@ def test_generate_music_destinations_do_not_collide(captured_requests, tmp_path)
     assert not (tmp_path / "music_output").exists()
 
 
-def test_generate_music_defaults_to_the_legacy_location(
-    captured_requests, tmp_path, monkeypatch
-):
-    """The pipeline still calls it without a destination; keep that working."""
-    monkeypatch.chdir(tmp_path)
-
-    result = generate_music("prompt", 5.0, "key")
-
-    path = Path(result)
-    assert path.parent == Path("music_output")
-    assert path.exists()
-    assert path.suffix == ".mp3"
-
-
 def test_generate_music_rounds_duration_up_to_whole_seconds(
     captured_requests, tmp_path
 ):

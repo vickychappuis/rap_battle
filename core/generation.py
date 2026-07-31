@@ -9,7 +9,6 @@ Shared by the API pipeline:
 import logging
 import math
 import os
-from datetime import datetime
 from pathlib import Path
 
 import requests
@@ -23,6 +22,10 @@ from core.prompts import LYRICIST_PROMPT_TEMPLATE
 ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/music/detailed"
 
 logger = logging.getLogger(__name__)
+
+
+class MusicGenerationError(Exception):
+    """ElevenLabs music generation failed."""
 
 
 def create_lyricist_agent(model: str | None = None):
@@ -78,24 +81,16 @@ def generate_music(
     tts_prompt: str,
     seconds: float,
     api_key: str,
-    output_path: str | Path | None = None,
+    output_path: str | Path,
 ) -> str:
     """Generate music via the ElevenLabs API and return the saved MP3 path.
 
     Args:
-        output_path: Where to write the MP3. Defaults to a timestamped file in
-            a CWD-relative ``music_output/`` directory (legacy behaviour, kept
-            for callers that move the file themselves). Pass a destination to
-            write it directly and avoid concurrent battles colliding.
+        output_path: Where to write the MP3. Each caller passes its own
+            destination so concurrent battles can never collide.
     """
-    if output_path is None:
-        output_dir = Path("music_output")
-        output_dir.mkdir(exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_path = output_dir / f"rap_battle_{timestamp}.mp3"
-    else:
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     headers = {"xi-api-key": api_key, "Content-Type": "application/json"}
 
@@ -120,4 +115,4 @@ def generate_music(
         error_msg = f"ElevenLabs API error: {e}"
         if e.response is not None:
             error_msg += f"\nResponse: {e.response.text}"
-        raise Exception(error_msg)
+        raise MusicGenerationError(error_msg) from e

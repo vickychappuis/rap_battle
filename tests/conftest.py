@@ -116,7 +116,7 @@ class FakeExternals:
 
 
 @pytest.fixture
-def fake_externals(monkeypatch, tmp_path):
+def fake_externals(monkeypatch):
     """Stub transcription, the lyricist chain, ElevenLabs and the judge."""
     import api.services.pipeline as pipeline_mod
     from core.models import LyricistOutput
@@ -137,14 +137,13 @@ def fake_externals(monkeypatch, tmp_path):
             mood_arc="confident -> aggressive",
         )
 
-    def fake_generate_music(tts_prompt, seconds, api_key, output_path=None, **kwargs):
+    def fake_generate_music(tts_prompt, seconds, api_key, output_path, **kwargs):
         fake.music_calls.append(
             {"prompt": tts_prompt, "seconds": seconds, "output_path": output_path}
         )
         fake._maybe_raise("music_error")
-        # Mirrors the real helper: write to the caller's destination when it
-        # gives one, otherwise fall back to a file of our own choosing.
-        out = Path(output_path) if output_path else tmp_path / f"generated_{len(fake.music_calls)}.mp3"
+        # Mirrors the real helper: write to the caller's destination.
+        out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_bytes(b"ID3fake-mp3-bytes")
         return str(out)
