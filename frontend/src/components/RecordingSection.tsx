@@ -11,7 +11,6 @@ interface RecordingSectionProps {
   sessionData: UseSessionReturn['sessionData'];
   turnHistory: UseSessionReturn['turnHistory'];
   status: SessionStatus | null;
-  error: UseSessionReturn['error'];
   retryCount: number;
   maxTurnRetries: number;
   winner: Winner | null;
@@ -59,7 +58,6 @@ export function RecordingSection({
   sessionData,
   turnHistory,
   status,
-  error,
   retryCount,
   maxTurnRetries,
   winner,
@@ -293,12 +291,6 @@ export function RecordingSection({
         />
         <span className="battle-grid__mic-label">{micLabel()}</span>
       </button>
-
-      {error && (
-        <div className="battle-grid__error" role="alert">
-          Error: {error}
-        </div>
-      )}
     </div>
   );
 }

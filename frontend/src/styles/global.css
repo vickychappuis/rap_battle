@@ -597,13 +597,6 @@ button:disabled:hover {
   opacity: 1;
 }
 
-.battle-grid__error {
-  grid-column: 1 / -1;
-  color: red;
-  font-weight: bold;
-  padding: 8px;
-}
-
 .battle-grid__mic-img {
   flex: 1;
   min-height: 0;

@@ -32,7 +32,7 @@ export function BattleStage() {
       <main className="main-content xerox-grain paper-texture -mt-12">
         <div className="container">
           {error && (
-            <div className="card text-spray-paint-red mt-4">
+            <div className="card text-spray-paint-red mt-4" role="alert">
               <strong>Error:</strong> {error}
             </div>
           )}
@@ -43,7 +43,6 @@ export function BattleStage() {
             sessionData={sessionData}
             turnHistory={turnHistory}
             status={status}
-            error={error}
             retryCount={retryCount}
             maxTurnRetries={maxTurnRetries}
             winner={winner}
