@@ -61,6 +61,7 @@ export interface UseSessionReturn {
   isUserTurn: boolean;
   isFinalRound: boolean;
   retryCount: number;
+  maxTurnRetries: number;
   winner: string | null;
   judgeReason: string | null;
 
@@ -84,10 +85,10 @@ const MAX_POLL_FAILURES = 5;
 const MAX_POLL_BACKOFF_MS = 8000;
 
 /**
- * Retry budget for a failed turn. Mirrors the backend, which rejects
- * POST /retry once retry_count reaches 2 ("Maximum retries exceeded").
+ * Fallback retry budget, used only until a session reports its own
+ * `max_turn_retries`. The backend value is the source of truth.
  */
-export const MAX_TURN_RETRIES = 2;
+const DEFAULT_MAX_TURN_RETRIES = 2;
 
 const SESSION_GONE_MESSAGE = 'This battle expired. Start a new battle to keep rapping.';
 const CONNECTION_LOST_MESSAGE =
@@ -117,6 +118,9 @@ export function useSession(): UseSessionReturn {
   const [countdown, setCountdown] = useState(0);
 
   const pollTimeoutRef = useRef<number | null>(null);
+  // The session's retry budget, readable from inside a poll chain without
+  // re-creating the polling callbacks when session state changes.
+  const maxTurnRetriesRef = useRef(DEFAULT_MAX_TURN_RETRIES);
   // Epoch token: bumped by every stopPolling()/startPolling(). A poll chain
   // captures it and re-checks it after each await, so a chain that was
   // cancelled (or superseded by a newer session) can never write state again.
@@ -136,6 +140,7 @@ export function useSession(): UseSessionReturn {
   const isUserTurn = currentTurn % 2 === 1;
   const isFinalRound = currentRound === turnsPerPlayer;
   const retryCount = status?.retry_count ?? 0;
+  const maxTurnRetries = sessionData?.max_turn_retries ?? DEFAULT_MAX_TURN_RETRIES;
   const winner = status?.winner ?? null;
   const judgeReason = status?.judge_reason ?? null;
 
@@ -248,7 +253,7 @@ export function useSession(): UseSessionReturn {
             // into the same musical timeline. Once the budget is spent the
             // only way forward is a brand new battle, so stop the music
             // rather than loop it under a dead-end banner.
-            if ((newStatus.retry_count ?? 0) >= MAX_TURN_RETRIES) {
+            if ((newStatus.retry_count ?? 0) >= maxTurnRetriesRef.current) {
               stopAudio();
             }
             setError(newStatus.error || 'Unknown error');
@@ -324,6 +329,7 @@ export function useSession(): UseSessionReturn {
 
       const session = await createSession(opponent);
       setSessionData(session);
+      maxTurnRetriesRef.current = session.max_turn_retries ?? DEFAULT_MAX_TURN_RETRIES;
 
       await startBaseTrack(session.base_track_url, session.bpm);
       await doRecording(session);
@@ -410,6 +416,7 @@ export function useSession(): UseSessionReturn {
     isUserTurn,
     isFinalRound,
     retryCount,
+    maxTurnRetries,
     winner,
     judgeReason,
 

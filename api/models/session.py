@@ -104,6 +104,9 @@ class SessionResponse(BaseModel):
     bars_per_turn: int
     turns_per_player: int
     record_duration: int
+    # The turn retry budget, so the frontend never has to hardcode a mirror
+    # of the backend's MAX_TURN_RETRIES.
+    max_turn_retries: int
     base_track_url: str
 
 

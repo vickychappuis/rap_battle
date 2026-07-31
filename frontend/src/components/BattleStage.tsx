@@ -15,6 +15,7 @@ export function BattleStage() {
     countdown,
     turnHistory,
     retryCount,
+    maxTurnRetries,
     winner,
     judgeReason,
     startBattle,
@@ -44,6 +45,7 @@ export function BattleStage() {
             status={status}
             error={error}
             retryCount={retryCount}
+            maxTurnRetries={maxTurnRetries}
             winner={winner}
             judgeReason={judgeReason}
             startBattle={startBattle}

@@ -42,16 +42,15 @@ from api.models.session import PipelineStep, TurnData
 logger = logging.getLogger(__name__)
 
 
+# How many times a single turn may be retried before the player has to start
+# over. Shipped to the frontend in SessionResponse.max_turn_retries so the UI
+# can decide whether the mic offers "Retry" or "Start Over" without hardcoding
+# a mirror of this value.
+MAX_TURN_RETRIES = 2
+
 # How long an idle session (and the mp3s it generated) is kept before the
 # next session creation sweeps it away. Sessions live in memory only, so
 # without this the process grows for its whole lifetime.
-# How many times a single turn may be retried before the player has to start
-# over. The frontend mirrors this as MAX_TURN_RETRIES in hooks/useSession.ts to
-# decide whether the mic offers "Retry" or "Start Over" — if the two ever
-# disagree, the UI stops offering the only working recovery path, so keep them
-# in step.
-MAX_TURN_RETRIES = 2
-
 SESSION_TTL_SECONDS = int(os.environ.get("SESSION_TTL_SECONDS", 3600))
 GENERATED_AUDIO_TTL_SECONDS = int(
     os.environ.get("GENERATED_AUDIO_TTL_SECONDS", SESSION_TTL_SECONDS)

@@ -8,6 +8,8 @@ export interface SessionResponse {
   bars_per_turn: number;
   turns_per_player: number;
   record_duration: number;
+  /** Turn retry budget; the backend rejects POST /retry beyond this count. */
+  max_turn_retries: number;
   base_track_url: string;
 }
 

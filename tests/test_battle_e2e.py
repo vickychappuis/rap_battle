@@ -6,6 +6,7 @@ recording, poll for status, repeat for the second round, then read the verdict.
 
 import pytest
 
+from api.services.pipeline import MAX_TURN_RETRIES
 from conftest import (
     TEST_BARS,
     TEST_TURNS_PER_PLAYER,
@@ -23,6 +24,8 @@ def test_full_two_round_battle(client, recording, fake_externals):
     assert session["turns_per_player"] == TEST_TURNS_PER_PLAYER
     assert session["base_track_url"] == "/static/tracks/base_90bpm.mp3"
     assert session["record_duration"] > 0
+    # The retry budget ships with the session so the UI never hardcodes it.
+    assert session["max_turn_retries"] == MAX_TURN_RETRIES
 
     # --- Round 1 ---
     assert upload_turn(client, sid, recording).status_code == 200

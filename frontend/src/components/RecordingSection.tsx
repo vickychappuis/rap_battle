@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAnimatedDots } from '../hooks/useAnimatedDots';
-import { MAX_TURN_RETRIES } from '../hooks/useSession';
 import type { SessionState, UseSessionReturn } from '../hooks/useSession';
 import type { SessionStatus } from '../api/session';
 import { OPPONENTS, toPersonaPayload } from '../data/opponents';
@@ -14,6 +13,7 @@ interface RecordingSectionProps {
   status: SessionStatus | null;
   error: UseSessionReturn['error'];
   retryCount: number;
+  maxTurnRetries: number;
   winner: string | null;
   judgeReason: string | null;
   startBattle: UseSessionReturn['startBattle'];
@@ -61,6 +61,7 @@ export function RecordingSection({
   status,
   error,
   retryCount,
+  maxTurnRetries,
   winner,
   judgeReason,
   startBattle,
@@ -89,7 +90,7 @@ export function RecordingSection({
   // with a 400 - such a turn has to be resumed through POST /retry instead.
   // retry_count === 0 in an error state means the pipeline never ran (a
   // frontend/mic failure), and there re-recording is the right move.
-  const canRetryTurn = isError && hasSession && retryCount > 0 && retryCount < MAX_TURN_RETRIES;
+  const canRetryTurn = isError && hasSession && retryCount > 0 && retryCount < maxTurnRetries;
   const canReRecord = isError && hasSession && retryCount === 0;
   // Retries spent (or the session is gone): only a fresh battle can continue.
   const mustStartFresh = isError && !canRetryTurn && !canReRecord;

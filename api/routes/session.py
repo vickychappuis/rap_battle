@@ -83,14 +83,6 @@ async def create_session(body: SessionCreate = SessionCreate()):
 
     session_id = str(uuid.uuid4())
 
-    # Calculate record duration from bars and BPM.
-    # Rounded UP: core.generation also ceils the ElevenLabs duration, so the
-    # user's record window and the AI's verse cover the same whole number of
-    # seconds (16 bars @90bpm = 42.67s -> 43s on both sides).
-    grid_beats = BARS_PER_TURN * 4
-    seconds = grid_beats * (60 / BPM)
-    record_duration = math.ceil(seconds)  # seconds
-
     # Resolve the AI MC's identity. The persona's own name wins when present;
     # `opponent_name` alone keeps working for clients that send nothing else.
     # Both have already been length-capped and sanitised by SessionCreate.
@@ -117,7 +109,11 @@ async def create_session(body: SessionCreate = SessionCreate()):
         bpm=BPM,
         bars_per_turn=BARS_PER_TURN,
         turns_per_player=TURNS_PER_PLAYER,
-        record_duration=record_duration,
+        # Rounded UP: core.generation also ceils the ElevenLabs duration, so
+        # the user's record window and the AI's verse cover the same whole
+        # number of seconds (16 bars @90bpm = 42.67s -> 43s on both sides).
+        record_duration=math.ceil(session.seconds),
+        max_turn_retries=MAX_TURN_RETRIES,
         base_track_url="/static/tracks/base_90bpm.mp3",
     )
 
