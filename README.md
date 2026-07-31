@@ -88,16 +88,30 @@ develop without spending ElevenLabs credits.
 Missing keys don't stop the server: it starts, logs which ones are absent, and
 `/health` still answers — battles just fail until you set them.
 
-## Tests
+## Tests & checks
+
+Backend:
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest
+ruff check .        # lint
+mypy                # type check
+python -m pytest    # test suite
 ```
 
 The suite drives real battles over the real HTTP API and the real background
 pipeline, stubbing only the three external boundaries (OpenAI transcription,
 the lyricist chain, ElevenLabs). It costs nothing to run and needs no API keys.
+
+Frontend (from `frontend/`):
+
+```bash
+npm run lint
+npm test            # vitest: useSession state machine + polling resilience
+npm run build       # tsc + vite build
+```
+
+CI runs all of the above on every push.
 
 ## API
 

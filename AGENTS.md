@@ -49,6 +49,9 @@ using the Web Audio clock.
 - Backend changes should come with tests. `python -m pytest` runs battles
   through the real API with only the external services stubbed, so it is fast
   and free; add to `tests/` rather than testing by hand.
+- Before pushing backend changes, run `ruff check .` and `mypy` (configured in
+  `pyproject.toml`); CI enforces both. Frontend hook/state changes should keep
+  `npm test` (vitest) green.
 
 ## Configuration & secrets
 
