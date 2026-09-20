@@ -89,10 +89,11 @@ this deployment's rate limit. The API needs `OPENAI_API_KEY`,
 
 ## License
 
-All rights reserved — see [LICENSE](LICENSE). The source is public so you can
-read it; that grants no right to use, copy, modify, or redistribute it. Get in
-touch if you want to do any of those.
+[PolyForm Noncommercial 1.0.0](LICENSE) — you can run, copy, and modify the
+code for any noncommercial purpose (personal use, study, hobby projects).
+Commercial use, including selling it or offering it as a paid service, needs
+the author's prior written permission.
 
-The bundled assets are covered too: the base instrumental (`assets/tracks/`)
+The bundled assets are the exception: the base instrumental (`assets/tracks/`)
 and the artwork (`frontend/public/`) are used under licences held by the author
 and cannot be redistributed.
