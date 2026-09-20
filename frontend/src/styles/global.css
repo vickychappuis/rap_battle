@@ -746,6 +746,58 @@ button:disabled:hover {
   pointer-events: none;
 }
 
+/* Hiatus notice - shown in place of the CTA while the arena is paused */
+.landing-hiatus {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  max-width: 480px;
+  margin-top: clamp(2.25rem, 5.5vw, 4.75rem);
+  text-align: center;
+  transform: rotate(-1deg);
+}
+
+.landing-hiatus__stamp {
+  color: var(--color-spray-paint-red);
+}
+
+.landing-hiatus__text {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.landing-hiatus__link {
+  font-family: var(--font-headline);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 1.25rem;
+  padding: 0.75rem 1.5rem;
+  border: 3px solid var(--color-ink-black);
+  border-radius: 4px;
+  background: var(--color-ink-black);
+  color: var(--color-poster-yellow);
+  text-decoration: none;
+  box-shadow: var(--shadow-cta);
+  transition:
+    transform var(--transition-normal),
+    background var(--transition-normal),
+    color var(--transition-normal),
+    box-shadow var(--transition-normal);
+}
+
+.landing-hiatus__link:hover {
+  background: var(--color-midnight-navy);
+  color: var(--color-paper-white);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.landing-hiatus__link:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-sm);
+}
+
 /* ===== 404 Page ===== */
 
 .not-found-page {
